@@ -19,18 +19,20 @@
 
 """boris – bayesian deconvolution of nuclear spectra"""
 
-from typing import Union
+from typing import Union, Tuple
 from pathlib import Path
 
 import numpy as np
 import pymc3 as pm
+from pymc3.backends.base import MultiTrace
+
 import uproot
 
 def rebin_hist(
-        hist: np.array,
+        hist: np.ndarray,
         bin_width: int,
         left: int = 0,
-        right: int = None):
+        right: int = None) -> Tuple[np.ndarray, np.ndarray]:
     """
     Rebin hist with dimension $N^M$. The binning is reduced by a factor
     of bin_width, i.e. neighboring bins are summed. Bin edges are assumed
@@ -41,6 +43,7 @@ def rebin_hist(
         bin_width: rebinning factor
         left: lower edge of first bin of resulting matrix
         right: maximum upper edge of last bin of resulting matrix
+
     Returns:
         rebinned matrix, resulting bin edges
     """
@@ -67,7 +70,7 @@ def get_rema(
         path: Union[str, Path],
         bin_width: int,
         left: int,
-        right: int):
+        right: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Obtain the response matrix from the root file at path.
     root file has to contain "rema" and "n_simulated_particles" (TH1).
@@ -90,11 +93,42 @@ def get_rema(
         nsim = response_file["n_simulated_particles"]
     rema, rema_bin_edges = response.numpy()
     rema_nsim = nsim.numpy()[0]
+
+    #with ROOT.TFile(str(path)) as response_file:
+    #    response = response_file.Get("rema")
+    #    nsim = response_file.Get("n_simulated_particles")
+    #rema = np.asarray(response)[1:-1]
+    #rema_nsim = np.asarray(nsim)[1:-1]
+    #rema_bin_edges = np.array([response.GetBinLowEdge(i)
+    #                           for i in range(1, response.shape[0]+2)])
+    
     rema_re = rebin_hist(rema, bin_width, left, right)
     rema_nsim_re = rebin_hist(rema_nsim, bin_width, left, right)
     return rema_re[0], *rema_nsim_re
 
-def deconvolute(rema, spectrum, ndraws=10000, tune=500, thin=1, burn=1000, cores=1):
+def deconvolute(
+        rema: np.ndarray,
+        spectrum: np.ndarray,
+        ndraws: int = 10000,
+        tune: int = 500,
+        thin: int = 1,
+        burn: int = 1000,
+        **kwargs) -> MultiTrace:
+    """
+    Generate a MCMC chain, deconvoluting spectrum using rema
+
+    Args:
+        rema: response matrix of the detector
+        spectrum: observed spectrum
+        ndraws: number of draws to sample
+        tune: number of steps to tune parameters
+        thin: thinning factor to decrease autocorrelation time
+        burn: discard initial steps (burn-in time)
+        **kwargs are passed to PyMC3.sample
+
+    Returns:
+        thinned and burned MCMC trace
+    """
     start_incident = np.clip(spectrum @ np.linalg.inv(rema), 1, np.inf)
     with pm.Model() as model:
         incident = pm.Exponential(
@@ -109,6 +143,6 @@ def deconvolute(rema, spectrum, ndraws=10000, tune=500, thin=1, burn=1000, cores
             ndraws,
             step=step,
             start={"incident": start_incident},
-            cores=cores
+            **kwargs
         )
     return trace[burn::thin]

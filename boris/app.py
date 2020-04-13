@@ -24,6 +24,7 @@ import sys
 import argparse
 import contextlib
 from pathlib import Path
+from typing import Union, List, Generator
 
 import numpy as np
 
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 from boris import rebin_hist, get_rema, deconvolute
 
 @contextlib.contextmanager
-def do_step(text: str):
+def do_step(text: str) -> Generator[None, None, None]:
     print(f"{text} ...")
     try:
         yield
@@ -51,7 +52,7 @@ def write_hist(
         histfile: Path,
         name: str,
         hist: np.array,
-        bin_edges: np.array):
+        bin_edges: np.array) -> None:
     if histfile.exists():
         raise Exception(f"Error writing {histfile}, already exists.")
     if histfile.suffix == ".npz":
@@ -92,6 +93,39 @@ def write_hist(
     else:
         raise Exception(f"Unknown output format: {histfile.suffix}")
 
+def read_spectrum(spectrum: Path, histname: Union[None, str] = None) -> np.ndarray:
+    """
+    Read spectrum to numpy array
+    """
+    if spectrum.suffix == ".root":
+        import uproot
+        with uproot.open(spectrum) as specfile:
+            if histname:
+                return specfile[histname].values
+            elif len(list(specfile.keys())) == 1:
+                return specfile[list(specfile.keys())[0]].values
+            else:
+                raise Exception("Please provide name of histogram to read from root file.")
+    elif spectrum.suffix == ".npz":
+        with np.load(spectrum) as specfile:
+            if histname:
+                return specfile[histname]
+            elif len(list(specfile.keys())) == 1:
+                return specfile[list(specfile.keys())[0]]
+            else:
+                raise Exception("Please provide name of histogram to read from npz file.")
+    elif spectrum.suffix == ".hdf5":
+        import h5py
+        with h5py.File(spectrum) as specfile:
+            if histname:
+                return specfile[histname]
+            elif len(list(specfile.keys())) == 1:
+                return specfile[list(specfile.keys())[0]]
+            else:
+                raise Exception("Please provide name of histogram to read from hdf5 file.")
+    else:
+        return np.loadtxt(spectrum)
+
 def boris(
         matrix: Path,
         observed_spectrum: Path,
@@ -103,9 +137,17 @@ def boris(
         tune: int,
         thin: int,
         burn: int,
-        cores: int):
+        cores: int,
+        histname: Union[None, str] = None) -> None:
     """
-    core application
+    Load response matrix and spectrum, sample MCMC chain,
+    write resulting trace to file.
+
+    Args:
+        matrix: Path of response matrix in root format
+        observed_spectrum: Read observed spetcrum from this path
+        incident_spectrum: Write incident spectrum trace to this path
+        histname: name of histogram in observed_spectrum to read (optional)
     """
     with do_step(f"Reading response matrix {matrix}"):
         rema_counts, rema_nsim, rema_bin_edges = get_rema(
@@ -113,7 +155,7 @@ def boris(
         rema = rema_counts / rema_nsim
 
     with do_step(f"Reading observed spectrum {observed_spectrum}"):
-        spectrum = np.loadtxt(observed_spectrum)
+        read_spectrum(observed_spectrum, histname)
         spectrum, spectrum_bin_edges = rebin_hist(
             spectrum, bin_width, left, right)
 
@@ -132,16 +174,16 @@ def boris(
                     trace["incident"], rema_bin_edges)
 
 class BorisApp:
-    def __init__(self):
+    def __init__(self) -> None:
         args = self.parse_args(sys.argv[1:])
         if args.seed:
             with do_step(f"Setting numpy seed to {args.seed}"):
                 np.random.seed(int(args.seed))
         boris(args.matrix, args.observed_spectrum, args.incident_spectrum,
               args.bin_width, args.left, args.right, args.ndraws,
-              args.tune, args.thin, args.burn, args.cores)
+              args.tune, args.thin, args.burn, args.cores, args.hist)
 
-    def parse_args(self, args):
+    def parse_args(self, args: List[str]) -> argparse.Namespace:
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
@@ -197,6 +239,12 @@ class BorisApp:
             type=int
         )
         parser.add_argument(
+            "-H", "--hist",
+            help="Name of histogram in observed_spectrum to read (optional)",
+            default=None,
+            type=str
+        )
+        parser.add_argument(
             "matrix",
             help="response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms",
             type=Path
@@ -220,14 +268,15 @@ def sirob(
         observed_spectrum: Path,
         bin_width: int,
         left: int,
-        right: int):
+        right: int,
+        histname: Union[None, str] = None) -> None:
     with do_step(f"Reading response matrix from {matrix}"):
         rema_counts, rema_nsim, rema_bin_edges = get_rema(
             matrix, bin_width, left, right)
         rema = rema_counts / rema_nsim
 
     with do_step(f"Reading incident spectrum from {incident_spectrum}"):
-        spectrum = np.loadtxt(incident_spectrum)
+        spectrum = read_spectrum(incident_spectrum, histname)
         incident, spectrum_bin_edges = rebin_hist(
             spectrum, bin_width, left, right)
     
@@ -240,12 +289,12 @@ def sirob(
     
         
 class SirobApp:
-    def __init__(self):
+    def __init__(self) -> None:
         args = self.parse_args(sys.argv[1:])
         sirob(args.matrix, args.incident_spectrum, args.observed_spectrum,
-              args.bin_width, args.left, args.right)
+              args.bin_width, args.left, args.right, args.hist)
 
-    def parse_args(self, args):
+    def parse_args(self, args: List[str]) -> argparse.Namespace:
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
@@ -267,13 +316,19 @@ class SirobApp:
             default=10
         )
         parser.add_argument(
+            "-H", "--hist",
+            help="Name of histogram in incident_spectrum to read (optional)",
+            default=None,
+            type=str
+        )
+        parser.add_argument(
             "matrix",
             help="response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms",
             type=Path
         )
         parser.add_argument(
             "incident_spectrum",
-            help="txt file containing the incident spectrum",
+            help="file containing the incident spectrum",
             type=Path
         )
         parser.add_argument(

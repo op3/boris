@@ -9,7 +9,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Requirements
 
-* Python>=3.8
+* Python>=3.7
 * PyMC3
 * uproot
 * pyh5 (*optional, to write hdf5 files*)
@@ -20,8 +20,7 @@ The `boris` command is provided to construct the MCMC chain:
 
 ```
 $ boris --help
-usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS]
-             matrix observed_spectrum incident_spectrum
+usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST] matrix observed_spectrum incident_spectrum
 
 positional arguments:
   matrix                response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms
@@ -43,19 +42,18 @@ optional arguments:
   --burn BURN           number of initial steps to discard (burn-in phase) (default: 1000)
   -n NDRAWS, --ndraws NDRAWS
                         number of samples to draw per core (default: 2000)
+  -H HIST, --hist HIST  Name of histogram in observed_spectrum to read (optional) (default: None)
 ```
-
-Refer to [Horst](https://github.com/uga-uga/Horst) for more information on the required format of the response matrix.
 
 A simple convolution of an incident spectrum using the response matrix can be performed using the `sirob` program:
 
 ```
 $ sirob --help
-usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] matrix incident_spectrum observed_spectrum
+usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] matrix incident_spectrum observed_spectrum
 
 positional arguments:
   matrix                response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms
-  incident_spectrum     txt file containing the incident spectrum
+  incident_spectrum     file containing the incident spectrum
   observed_spectrum     write observed (convoluted) spectrum to this path
 
 optional arguments:
@@ -65,7 +63,27 @@ optional arguments:
                         maximum upper edge of last bin of deconvoluted spectrum (default: None)
   -b BIN_WIDTH, --bin-width BIN_WIDTH
                         bin width of deconvoluted spectrum (default: 10)
+  -H HIST, --hist HIST  Name of histogram in incident_spectrum to read (optional) (default: None)
 ```
+
+#### Input and output data
+
+The `response_matrix` file has to contain a simulated detector response matrix
+(`.root` file with an NBINS×NBINS TH2 histogram called `rema` and a TH1 histogram called `n_simulated_particles` containing the response matrix, and the number of simulated primary particles, respectively).
+Refer to [Horst](https://github.com/uga-uga/Horst) for more information on the required format of the response matrix.
+
+The `observed_spectrum` file has to contain the experimentally observed (folded) spectrum.
+It can be provided in  `.txt`, `.root`, `.hdf5` or `.txt` format (detected automatically).
+If the file contains multiple objects, the name of the histogram has to be provided using the `-H`/`--hist` option.
+
+The `incident_spectrum` file will be created by boris and contains the trace (thinned, after burn-in) of the generated MCMC chain.
+Supported file formats include `.txt`, `.root`, `.hdf5` and `.npz`.
+The trace will be called `incident` if supported by the file format.
+Binning information is given directly (`.root`), as a separate `bin_edges` object (`.hdf5`, `.npz`) or as a comment (`.txt`).
+
+Currently, it is assumed that the binning is equal to 1 keV per bin, with the lower edge of the first bin starting at 0.
+Other binnings can be used, as long as the binning of `response_matrix` and `observed_spectrum` is identical, but this will result in incorrect `bin_edges` being written to `incident_spectrum`.
+The number of bins in `response_matrix` and `observed_spectrum` may differ as long as both files contain the deconvoluted energy range.
 
 ## License
 
