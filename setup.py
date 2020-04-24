@@ -7,10 +7,10 @@ import os
 here = Path(__file__).parent
 
 # Get the long description from the README file
-with open(here/"README.md", encoding='utf-8') as f:
+with open(here / "README.md", encoding="utf-8") as f:
     long_description = f.read()
 
-KEYWORDS = '''\
+KEYWORDS = """\
 analysis
 data-analysis
 gamma-spectroscopy
@@ -19,10 +19,10 @@ nuclear-spectrum-analysis
 physics
 python
 spectroscopy
-'''
+"""
 
-CLASSIFIERS = '''\
-Development Status :: 2 - Pre-Alpha
+CLASSIFIERS = """\
+Development Status :: 3 - Alpha
 Environment :: Console
 Intended Audience :: Information Technology
 Intended Audience :: Science/Research
@@ -42,32 +42,27 @@ Programming Language :: Python :: 3.8
 Topic :: Scientific/Engineering
 Topic :: Scientific/Engineering :: Information Analysis
 Topic :: Scientific/Engineering :: Physics
-'''
+"""
 
 setup(
-    name='hdtv',
-    version='0.0.1',
-    description='Bayesian deconvolution of nuclear spectra',
-    url='https://github.com/op3/boris',
-    author='Oliver Papst',
-    maintainer_email='opapst@ikp.tu-darmstadt.de',
+    name="hdtv",
+    version="0.1.0",
+    description="Bayesian deconvolution of nuclear spectra",
+    url="https://github.com/op3/boris",
+    author="Oliver Papst",
+    maintainer_email="opapst@ikp.tu-darmstadt.de",
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    license='GPL',
-    classifiers=CLASSIFIERS.strip().split('\n'),
-    keywords=KEYWORDS.strip().replace('\n', ' '),
-    install_requires=[
-        'numpy',
-        'pymc3',
-        'uproot',
-    ],
+    long_description_content_type="text/markdown",
+    license="GPL",
+    classifiers=CLASSIFIERS.strip().split("\n"),
+    keywords=KEYWORDS.strip().replace("\n", " "),
+    install_requires=["numpy", "pymc3", "uproot",],
     entry_points={
-        'console_scripts': [
-            'boris=boris.app:BorisApp',
-            'sirob=boris.app:SirobApp',
+        "console_scripts": [
+            "boris=boris.app:BorisApp",
+            "sirob=boris.app:SirobApp",
         ]
     },
-    packages=[
-        'boris',
-    ],
+    packages=["boris",],
+    tests_require=["pytest", "pytest-cov"],
 )

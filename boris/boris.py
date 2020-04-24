@@ -28,11 +28,10 @@ from pymc3.backends.base import MultiTrace
 
 import uproot
 
+
 def rebin_hist(
-        hist: np.ndarray,
-        bin_width: int,
-        left: int = 0,
-        right: int = None) -> Tuple[np.ndarray, np.ndarray]:
+    hist: np.ndarray, bin_width: int, left: int = 0, right: int = None
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Rebin hist with dimension $N^M$. The binning is reduced by a factor
     of bin_width, i.e. neighboring bins are summed. Bin edges are assumed
@@ -50,27 +49,55 @@ def rebin_hist(
     left = left or 0
     right = right or hist.shape[0] + 1
     num_dim = hist.ndim
-    num_bins = (right - left)//bin_width
+    num_bins = (right - left) // bin_width
     upper = left + num_bins * bin_width
 
     if not (np.array(hist.shape)[1:] == np.array(hist.shape)[:-1]).all():
         raise ValueError("Input histogram has to be square.")
-    
+
     res = (
-        hist[(slice(left,upper),)*num_dim]
-        .reshape(*[num_bins, bin_width]*num_dim)
+        hist[(slice(left, upper),) * num_dim]
+        .reshape(*[num_bins, bin_width] * num_dim)
         .sum(axis=(num_dim * 2 - 1))
     )
     for i in range(1, num_dim):
         res = res.sum(axis=i)
-    bin_edges = np.linspace(left, upper, num_bins+1)
+    bin_edges = np.linspace(left, upper, num_bins + 1)
     return res, bin_edges
 
+
+def rebin_uniform(
+    hist: np.ndarray, bin_edges: np.ndarray, bin_edges_new: np.ndarray
+) -> np.ndarray:
+    """
+    Rebin hist with binning bin_edges to bin_edges_new. Each count in
+    the original histogram is randomly placed within the limits of the
+    corresponding bin following a uniform probability distribution.
+    A new histogram with bin edges bin_edges_new is filled with the
+    resulting data.
+
+    Args:
+        hist: Original histogram to rebin.
+        bin_edges: bin edges of original histogram.
+        bin_edges_new: bin edges of rebinned histogram.
+
+    Returns:
+        rebinned histogram 
+    """
+    if not issubclass(hist.dtype.type, np.integer):
+        raise ValueError("Histogram has to be of type integer")
+    if not (hist >= 0).all():
+        raise ValueError("Histogram contains negative bins")
+
+    data_new = np.random.uniform(
+        np.repeat(bin_edges[:-1], hist), np.repeat(bin_edges[1:], hist)
+    )
+    return np.histogram(data_new, bin_edges_new)[0]
+
+
 def get_rema(
-        path: Union[str, Path],
-        bin_width: int,
-        left: int,
-        right: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    path: Union[str, Path], bin_width: int, left: int, right: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Obtain the response matrix from the root file at path.
     root file has to contain "rema" and "n_simulated_particles" (TH1).
@@ -94,26 +121,28 @@ def get_rema(
     rema, rema_bin_edges = response.numpy()
     rema_nsim = nsim.numpy()[0]
 
-    #with ROOT.TFile(str(path)) as response_file:
+    # with ROOT.TFile(str(path)) as response_file:
     #    response = response_file.Get("rema")
     #    nsim = response_file.Get("n_simulated_particles")
-    #rema = np.asarray(response)[1:-1]
-    #rema_nsim = np.asarray(nsim)[1:-1]
-    #rema_bin_edges = np.array([response.GetBinLowEdge(i)
+    # rema = np.asarray(response)[1:-1]
+    # rema_nsim = np.asarray(nsim)[1:-1]
+    # rema_bin_edges = np.array([response.GetBinLowEdge(i)
     #                           for i in range(1, response.shape[0]+2)])
-    
+
     rema_re = rebin_hist(rema, bin_width, left, right)
     rema_nsim_re = rebin_hist(rema_nsim, bin_width, left, right)
-    return rema_re[0], *rema_nsim_re
+    return (rema_re[0], *rema_nsim_re)
+
 
 def deconvolute(
-        rema: np.ndarray,
-        spectrum: np.ndarray,
-        ndraws: int = 10000,
-        tune: int = 500,
-        thin: int = 1,
-        burn: int = 1000,
-        **kwargs) -> MultiTrace:
+    rema: np.ndarray,
+    spectrum: np.ndarray,
+    ndraws: int = 10000,
+    tune: int = 500,
+    thin: int = 1,
+    burn: int = 1000,
+    **kwargs,
+) -> MultiTrace:
     """
     Generate a MCMC chain, deconvoluting spectrum using rema
 
@@ -132,17 +161,13 @@ def deconvolute(
     start_incident = np.clip(spectrum @ np.linalg.inv(rema), 1, np.inf)
     with pm.Model() as model:
         incident = pm.Exponential(
-            "incident",
-            1/np.mean(start_incident),
-            shape=spectrum.shape[0])
+            "incident", 1 / np.mean(start_incident), shape=spectrum.shape[0]
+        )
         folded = incident @ rema
         observation = pm.Poisson("spectrum", folded, observed=spectrum)
 
         step = pm.NUTS()
         trace = pm.sample(
-            ndraws,
-            step=step,
-            start={"incident": start_incident},
-            **kwargs
+            ndraws, step=step, start={"incident": start_incident}, **kwargs
         )
     return trace[burn::thin]

@@ -20,7 +20,9 @@ The `boris` command is provided to construct the MCMC chain:
 
 ```
 $ boris --help
-usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST] matrix observed_spectrum incident_spectrum
+usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST]
+             [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
+             matrix observed_spectrum incident_spectrum
 
 positional arguments:
   matrix                response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms
@@ -43,13 +45,18 @@ optional arguments:
   -n NDRAWS, --ndraws NDRAWS
                         number of samples to draw per core (default: 2000)
   -H HIST, --hist HIST  Name of histogram in observed_spectrum to read (optional) (default: None)
+  --cal-bin-centers C0 [C1 ...]
+                        Provide an energy calibration for the bin centers of the observed spectrum, if bins are unknown (tv style calibration) (default: None)
+  --cal-bin-edges C0 [C1 ...]
+                        Provide an energy calibration for the bin edges of the observed spectrum, if bins are unknown (default: None)
 ```
 
 A simple convolution of an incident spectrum using the response matrix can be performed using the `sirob` program:
 
 ```
 $ sirob --help
-usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] matrix incident_spectrum observed_spectrum
+usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
+             matrix incident_spectrum observed_spectrum
 
 positional arguments:
   matrix                response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms
@@ -64,6 +71,10 @@ optional arguments:
   -b BIN_WIDTH, --bin-width BIN_WIDTH
                         bin width of deconvoluted spectrum (default: 10)
   -H HIST, --hist HIST  Name of histogram in incident_spectrum to read (optional) (default: None)
+  --cal-bin-centers C0 [C1 ...]
+                        Provide an energy calibration for the bin centers of the incident spectrum, if bins are unknown (tv style calibration) (default: None)
+  --cal-bin-edges C0 [C1 ...]
+                        Provide an energy calibration for the bin edges of the incident spectrum, if bins are unknown (default: None)
 ```
 
 #### Input and output data
@@ -81,9 +92,15 @@ Supported file formats include `.txt`, `.root`, `.hdf5` and `.npz`.
 The trace will be called `incident` if supported by the file format.
 Binning information is given directly (`.root`), as a separate `bin_edges` object (`.hdf5`, `.npz`) or as a comment (`.txt`).
 
-Currently, it is assumed that the binning is equal to 1 keV per bin, with the lower edge of the first bin starting at 0.
-Other binnings can be used, as long as the binning of `response_matrix` and `observed_spectrum` is identical, but this will result in incorrect `bin_edges` being written to `incident_spectrum`.
-The number of bins in `response_matrix` and `observed_spectrum` may differ as long as both files contain the deconvoluted energy range.
+Currently, it is assumed that the binning of `response_matrix` is equal to 1 keV per bin, with the lower edge of the first bin starting at 0.
+The `observed_spectrum` will be automatically rebinned to fit to the binning of `response_matrix`.
+The `observed_spectrum` can be given with several differend binning conventions:
+If it is a ROOT histogram, the assigned binning is used.
+If loaded from a two-column `.txt`, `.npz` or `hdf5` array, the first column is assumed to correspond to the bin centers.
+If loaded from a `.txt`, `.npz` or `hdf5` array with more than two columns, the first two columns are assumed to correspond to the bin edges.
+The resulting binning has to be contiguous.
+If only one-column is given, it is assumed, that the binning corresponds to the binning of the `response_matrix`.
+Using `--cal-bin-edges` or `--cal-bin-centers`, it is possible to calibrate an uncalibrated spectrum.
 
 ## License
 
