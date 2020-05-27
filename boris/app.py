@@ -245,18 +245,18 @@ def read_rebin_spectrum(
     cal_bin_edges: Optional[List[float]] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
-    if spectrum_bin_edges and (cal_bin_centers or cal_bin_edges):
+    if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
         logger.warning("Ignoring calibration, binnig already provided")
-    if cal_bin_centers:
+    if cal_bin_centers is not None:
         spectrum_bin_edges = np.poly1d(np.array(cal_bin_centers)[::-1])(
             np.arange(spectrum.size + 1) - 0.5
         )
-    elif cal_bin_edges:
+    elif cal_bin_edges is not None:
         spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
             np.arange(spectrum.size + 1)
         )
 
-    if spectrum_bin_edges:
+    if spectrum_bin_edges is not None:
         spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
 
     return spectrum, spectrum_bin_edges
@@ -302,9 +302,6 @@ def boris(
             histname,
             cal_bin_centers,
             cal_bin_edges,
-        )
-        spectrum, spectrum_bin_edges = rebin_hist(
-            spectrum, bin_width, left, right
         )
 
     with do_step(f"🎲 Sampling from posterior distribution"):
@@ -466,15 +463,12 @@ def sirob(
         rema = rema_counts / rema_nsim
 
     with do_step(f"Reading incident spectrum from {incident_spectrum}"):
-        spectrum, spectrum_bin_edges = read_rebin_spectrum(
+        incident, spectrum_bin_edges = read_rebin_spectrum(
             incident_spectrum,
             rema_bin_edges,
             histname,
             cal_bin_centers,
             cal_bin_edges,
-        )
-        incident, spectrum_bin_edges = rebin_hist(
-            spectrum, bin_width, left, right
         )
 
     with do_step("Calculating observed (convoluted) spectrum"):
