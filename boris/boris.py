@@ -19,7 +19,7 @@
 
 """boris – bayesian deconvolution of nuclear spectra"""
 
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 from pathlib import Path
 
 import numpy as np
@@ -137,6 +137,8 @@ def get_rema(
 def deconvolute(
     rema: np.ndarray,
     spectrum: np.ndarray,
+    background: Optional[np.ndarray] = None,
+    background_scale: float = 1.0,
     ndraws: int = 10000,
     tune: int = 500,
     thin: int = 1,
@@ -149,6 +151,8 @@ def deconvolute(
     Args:
         rema: response matrix of the detector
         spectrum: observed spectrum
+        background: background spectrum
+        background_scale: relative live time of background spectrum
         ndraws: number of draws to sample
         tune: number of steps to tune parameters
         thin: thinning factor to decrease autocorrelation time
@@ -158,16 +162,44 @@ def deconvolute(
     Returns:
         thinned and burned MCMC trace
     """
-    start_incident = np.clip(spectrum @ np.linalg.inv(rema), 1, np.inf)
+    background_scale = 1 / background_scale
+    if background is None:
+        spectrum_wobg = spectrum
+    else:
+        if not background.shape == spectrum.shape:
+            raise ValueError("Mismatch of background and spectrum dimensions.")
+        spectrum_wobg = spectrum - background_scale * background
+
+    start_incident = np.clip(spectrum_wobg @ np.linalg.inv(rema), 1, np.inf)
+
     with pm.Model() as model:
+        # Model parameter
         incident = pm.Exponential(
             "incident", 1 / np.mean(start_incident), shape=spectrum.shape[0]
         )
         folded = incident @ rema
-        observation = pm.Poisson("spectrum", folded, observed=spectrum)
+        if background is None:
+            spectrum_detector = folded
+        else:
+            background_inc = pm.Exponential(
+                "background",
+                1 / np.mean(background),
+                shape=background.shape[0],
+            )
+            spectrum_detector = folded + background_scale * background_inc
+
+        # Measured data
+        if background is not None:
+            background_obs = pm.Poisson(
+                "background_obs", background_inc, observed=background,
+            )
+        observation = pm.Poisson(
+            "spectrum_obs", spectrum_detector, observed=spectrum
+        )
 
         step = pm.NUTS()
-        trace = pm.sample(
-            ndraws, step=step, start={"incident": start_incident}, **kwargs
-        )
+        start = {"incident": start_incident}
+        if background is not None:
+            start["background"] = np.clip(background, 1, np.inf)
+        trace = pm.sample(ndraws, step=step, start=start, **kwargs)
     return trace[burn::thin]

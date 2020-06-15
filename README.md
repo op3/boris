@@ -16,12 +16,12 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Usage
 
-The `boris` command is provided to construct the MCMC chain: 
+The `boris` command is provided to construct the MCMC chain:
 
 ```
 $ boris --help
-usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST]
-             [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
+usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST] [--bg-spectrum BG_SPECTRUM]
+             [--bg-hist BG_HIST] [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
              matrix observed_spectrum incident_spectrum
 
 positional arguments:
@@ -44,7 +44,11 @@ optional arguments:
   --burn BURN           number of initial steps to discard (burn-in phase) (default: 1000)
   -n NDRAWS, --ndraws NDRAWS
                         number of samples to draw per core (default: 2000)
-  -H HIST, --hist HIST  Name of histogram in observed_spectrum to read (optional) (default: None)
+  -H HIST, --hist HIST  name of histogram in observed_spectrum to read (optional) (default: None)
+  --bg-spectrum BG_SPECTRUM
+                        path to observed background spectrum (optional) (default: None)
+  --bg-hist BG_HIST     name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional) (default: None)
+  --bg-scale BG_SCALE   relative scale of background spectrum live time to observed spectrum live time (optional) (default: 1.0)
   --cal-bin-centers C0 [C1 ...]
                         Provide an energy calibration for the bin centers of the observed spectrum, if bins are unknown (tv style calibration) (default: None)
   --cal-bin-edges C0 [C1 ...]
