@@ -59,7 +59,8 @@ A simple convolution of an incident spectrum using the response matrix can be pe
 
 ```
 $ sirob --help
-usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
+usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST] [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
+             --cal-bin-edges C0 [C1 ...]]
              matrix incident_spectrum observed_spectrum
 
 positional arguments:
@@ -75,6 +76,10 @@ optional arguments:
   -b BIN_WIDTH, --bin-width BIN_WIDTH
                         bin width of deconvoluted spectrum (default: 10)
   -H HIST, --hist HIST  Name of histogram in incident_spectrum to read (optional) (default: None)
+  --bg-spectrum BG_SPECTRUM
+                        path to observed background spectrum (optional) (default: None)
+  --bg-hist BG_HIST     name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional) (default: None)
+  --bg-scale BG_SCALE   relative scale of background spectrum live time to observed spectrum live time (optional) (default: 1.0)
   --cal-bin-centers C0 [C1 ...]
                         Provide an energy calibration for the bin centers of the incident spectrum, if bins are unknown (tv style calibration) (default: None)
   --cal-bin-edges C0 [C1 ...]

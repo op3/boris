@@ -169,13 +169,16 @@ def deconvolute(
         if not background.shape == spectrum.shape:
             raise ValueError("Mismatch of background and spectrum dimensions.")
         spectrum_wobg = spectrum - background_scale * background
+        background_start = np.clip(background, 1, np.inf)
+        background_normalization = 1 / np.mean(background)
 
-    start_incident = np.clip(spectrum_wobg @ np.linalg.inv(rema), 1, np.inf)
+    incident_start = np.clip(spectrum_wobg @ np.linalg.inv(rema), 1, np.inf)
+    incident_normalization = 1 / np.mean(incident_start)
 
     with pm.Model() as model:
         # Model parameter
         incident = pm.Exponential(
-            "incident", 1 / np.mean(start_incident), shape=spectrum.shape[0]
+            "incident", incident_normalization, shape=spectrum.shape[0]
         )
         folded = incident @ rema
         if background is None:
@@ -183,7 +186,7 @@ def deconvolute(
         else:
             background_inc = pm.Exponential(
                 "background",
-                1 / np.mean(background),
+                background_normalization,
                 shape=background.shape[0],
             )
             spectrum_detector = folded + background_scale * background_inc
@@ -198,8 +201,8 @@ def deconvolute(
         )
 
         step = pm.NUTS()
-        start = {"incident": start_incident}
+        start = {"incident": incident_start}
         if background is not None:
-            start["background"] = np.clip(background, 1, np.inf)
+            start["background"] = background_start
         trace = pm.sample(ndraws, step=step, start=start, **kwargs)
     return trace[burn::thin]

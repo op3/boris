@@ -505,6 +505,9 @@ def sirob(
     left: int,
     right: int,
     histname: Optional[str] = None,
+    background_spectrum: Optional[Path] = None,
+    background_name: Optional[str] = None,
+    background_scale: float = 1.0,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
 ) -> None:
@@ -514,7 +517,10 @@ def sirob(
         )
         rema = rema_counts / rema_nsim
 
-    with do_step(f"Reading incident spectrum from {incident_spectrum}"):
+    print_histname = f" ({histname})" if histname else ""
+    with do_step(
+        f"Reading incident spectrum {incident_spectrum}{print_histname}"
+    ):
         incident, spectrum_bin_edges = read_rebin_spectrum(
             incident_spectrum,
             rema_bin_edges,
@@ -523,8 +529,34 @@ def sirob(
             cal_bin_edges,
         )
 
+    background = None
+    if background_spectrum is not None or background_name is not None:
+        print_bgname = f" ({background_name})" if histname else ""
+        with do_step(
+            f"Reading background spectrum {background_spectrum or observed_spectrum}{print_bgname}"
+        ):
+            if background_spectrum is not None:
+                background, _ = read_rebin_spectrum(
+                    background_spectrum,
+                    rema_bin_edges,
+                    background_name,
+                    cal_bin_centers,
+                    cal_bin_edges,
+                )
+            else:
+                background, _ = read_rebin_spectrum(
+                    observed_spectrum,
+                    rema_bin_edges,
+                    background_name,
+                    cal_bin_centers,
+                    cal_bin_edges,
+                )
+
     with do_step("Calculating observed (convoluted) spectrum"):
-        observed = incident @ rema
+        if background is None:
+            observed = incident @ rema
+        else:
+            observed = incident @ rema + background_scale * background
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
         write_hist(observed_spectrum, "observed", observed, spectrum_bin_edges)
@@ -541,6 +573,9 @@ class SirobApp:
             args.left,
             args.right,
             args.hist,
+            args.bg_spectrum,
+            args.bg_hist,
+            args.bg_scale,
             args.cal_bin_centers,
             args.cal_bin_edges,
         )
@@ -576,6 +611,24 @@ class SirobApp:
             help="Name of histogram in incident_spectrum to read (optional)",
             default=None,
             type=str,
+        )
+        parser.add_argument(
+            "--bg-spectrum",
+            help="path to observed background spectrum (optional)",
+            default=None,
+            type=Path,
+        )
+        parser.add_argument(
+            "--bg-hist",
+            help="name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional)",
+            default=None,
+            type=str,
+        )
+        parser.add_argument(
+            "--bg-scale",
+            help="relative scale of background spectrum live time to observed spectrum live time (optional)",
+            default=1.0,
+            type=float,
         )
 
         calgroup = parser.add_mutually_exclusive_group()
