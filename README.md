@@ -1,5 +1,10 @@
 # boris
 
+[![Build Status](https://travis-ci.org/op3/boris.svg?branch=master)](https://travis-ci.org/op3/boris)
+[![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
+[![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
+
 ## Bayesian Optimization to Reconstruct the Incident Spectrum
 
 boris is a modern MCMC-based deconvolution code that can be used to unfold nuclear spectra.
@@ -9,16 +14,16 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Requirements
 
-* Python>=3.7
-* PyMC3
-* uproot
-* pyh5 (*optional, to write hdf5 files*)
+ * Python>=3.7
+ * PyMC3
+ * uproot
+ * pyh5 (*optional, to write hdf5 files*)
 
 ## Usage
 
 The `boris` command is provided to construct the MCMC chain:
 
-```
+```bash
 $ boris --help
 usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS] [-H HIST] [--bg-spectrum BG_SPECTRUM]
              [--bg-hist BG_HIST] [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
@@ -86,7 +91,7 @@ optional arguments:
                         Provide an energy calibration for the bin edges of the incident spectrum, if bins are unknown (default: None)
 ```
 
-#### Input and output data
+### Input and output data
 
 The `response_matrix` file has to contain a simulated detector response matrix
 (`.root` file with an NBINS×NBINS TH2 histogram called `rema` and a TH1 histogram called `n_simulated_particles` containing the response matrix, and the number of simulated primary particles, respectively).
@@ -117,10 +122,10 @@ Copyright © 2020
 
 Oliver Papst `<opapst@ikp.tu-darmstadt.de>`
 
-This code is distributed under the terms of the GNU General Public License. See [COPYING](COPYING) for more information.
-
+This code is distributed under the terms of the GNU General Public License, version 3 or later. See [COPYING](COPYING) for more information.
 
 ## Acknowledgements
 
+We thank U. Friman-Gayer for valuable discussions.
 This work has been funded by the State of Hesse under the grant “Nuclear Photonics” within the LOEWE program.
 O. Papst acknowledges support by the Helmholtz Graduate School for Hadron and Ion Research of the Helmholtz Association.
