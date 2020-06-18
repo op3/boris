@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris command line interface"""
+"""boris command line interface."""
 
 import argparse
 import contextlib
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         sys.path.remove(project_path)
     sys.path.insert(0, str(project_dir))
 
-from boris import rebin_hist, rebin_uniform, get_rema, deconvolute
+from boris import rebin_uniform, get_rema, deconvolute
 
 logger = logging.getLogger("boris")
 
@@ -114,8 +114,7 @@ def write_hist(
 def get_bin_edges(
     hist: np.ndarray,
 ) -> Tuple[np.ndarray, Union[None, np.ndarray]]:
-    """
-    Try to determine if hist contains binning information.
+    """Try to determine if hist contains binning information.
 
     Args:
         hist: histogram from txt file
@@ -354,31 +353,33 @@ def boris(
 
 class BorisApp:
     def __init__(self) -> None:
-        args = self.parse_args(sys.argv[1:])
-        if args.seed:
-            with do_step(f"Setting numpy seed to {args.seed}", simple=True):
-                np.random.seed(int(args.seed))
+        """CLI interface for boris"""
+        self.parse_args(sys.argv[1:])
+        if self.args.seed:
+            with do_step(f"Setting numpy seed to {self.args.seed}", simple=True):
+                np.random.seed(int(self.args.seed))
         boris(
-            args.matrix,
-            args.observed_spectrum,
-            args.incident_spectrum,
-            args.bin_width,
-            args.left,
-            args.right,
-            args.ndraws,
-            args.tune,
-            args.thin,
-            args.burn,
-            args.cores,
-            args.hist,
-            args.bg_spectrum,
-            args.bg_hist,
-            args.bg_scale,
-            args.cal_bin_centers,
-            args.cal_bin_edges,
+            self.args.matrix,
+            self.args.observed_spectrum,
+            self.args.incident_spectrum,
+            self.args.bin_width,
+            self.args.left,
+            self.args.right,
+            self.args.ndraws,
+            self.args.tune,
+            self.args.thin,
+            self.args.burn,
+            self.args.cores,
+            self.args.hist,
+            self.args.bg_spectrum,
+            self.args.bg_hist,
+            self.args.bg_scale,
+            self.args.cal_bin_centers,
+            self.args.cal_bin_edges,
         )
 
-    def parse_args(self, args: List[str]) -> argparse.Namespace:
+    def parse_args(self, args: List[str]):
+        """Parse CLI arguments"""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
@@ -494,7 +495,7 @@ class BorisApp:
             type=Path,
         )
 
-        return parser.parse_args(args)
+        self.args = parser.parse_args(args)
 
 
 def sirob(
@@ -564,23 +565,25 @@ def sirob(
 
 class SirobApp:
     def __init__(self) -> None:
-        args = self.parse_args(sys.argv[1:])
+        """CLI interface for sirob"""
+        self.parse_args(sys.argv[1:])
         sirob(
-            args.matrix,
-            args.incident_spectrum,
-            args.observed_spectrum,
-            args.bin_width,
-            args.left,
-            args.right,
-            args.hist,
-            args.bg_spectrum,
-            args.bg_hist,
-            args.bg_scale,
-            args.cal_bin_centers,
-            args.cal_bin_edges,
+            self.args.matrix,
+            self.args.incident_spectrum,
+            self.args.observed_spectrum,
+            self.args.bin_width,
+            self.args.left,
+            self.args.right,
+            self.args.hist,
+            self.args.bg_spectrum,
+            self.args.bg_hist,
+            self.args.bg_scale,
+            self.args.cal_bin_centers,
+            self.args.cal_bin_edges,
         )
 
-    def parse_args(self, args: List[str]) -> argparse.Namespace:
+    def parse_args(self, args: List[str]):
+        """Parse CLI arguments"""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
@@ -662,7 +665,7 @@ class SirobApp:
             help="write observed (convoluted) spectrum to this path",
             type=Path,
         )
-        return parser.parse_args(args)
+        self.args = parser.parse_args(args)
 
 
 if __name__ == "__main__":

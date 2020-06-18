@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris – bayesian deconvolution of nuclear spectra"""
+"""boris – bayesian deconvolution of nuclear spectra."""
 
 from typing import Union, Tuple, Optional
 from pathlib import Path
@@ -32,11 +32,11 @@ import uproot
 def rebin_hist(
     hist: np.ndarray, bin_width: int, left: int = 0, right: int = None
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Rebin hist with dimension $N^M$. The binning is reduced by a factor
-    of bin_width, i.e. neighboring bins are summed. Bin edges are assumed
-    to be at [0, 1, 2, …].
-    
+    """Rebin hist with dimension $N^M$.
+
+    The binning is reduced by a factor of bin_width, i.e. neighboring
+    bins are summed. Bin edges are assumed to be at [0, 1, 2, …].
+
     Args:
         hist: Input matrix of type $N^M$ (N bins, M dimensions)
         bin_width: rebinning factor
@@ -82,7 +82,7 @@ def rebin_uniform(
         bin_edges_new: bin edges of rebinned histogram.
 
     Returns:
-        rebinned histogram 
+        rebinned histogram
     """
     if not issubclass(hist.dtype.type, np.integer):
         raise ValueError("Histogram has to be of type integer")
@@ -119,6 +119,10 @@ def get_rema(
         response = response_file["rema"]
         nsim = response_file["n_simulated_particles"]
     rema, rema_bin_edges = response.numpy()
+    if not np.isclose(np.diff(rema_bin_edges), 1.0).all():
+        raise NotImplementedError(
+            "Response matrix with binning unequal to 1 keV not yet implemented."
+        )
     rema_nsim = nsim.numpy()[0]
 
     # with ROOT.TFile(str(path)) as response_file:

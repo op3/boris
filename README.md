@@ -14,10 +14,11 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Requirements
 
- * Python>=3.7
- * PyMC3
- * uproot
- * pyh5 (*optional, to write hdf5 files*)
+* Python>=3.7
+* [numpy](https://numpy.org/)
+* [PyMC3](https://docs.pymc.io/)
+* [uproot](https://github.com/scikit-hep/uproot)
+* [h5py](https://www.h5py.org/) (*optional, to write hdf5 files*)
 
 ## Usage
 
