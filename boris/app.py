@@ -25,7 +25,7 @@ import contextlib
 import logging
 import sys
 from pathlib import Path
-from typing import Generator, List, Optional, Tuple, Union
+from typing import Generator, List, Optional
 
 import numpy as np
 
@@ -36,9 +36,16 @@ if __name__ == "__main__":
         sys.path.remove(project_path)
     sys.path.insert(0, str(project_dir))
 
-from boris import rebin_uniform, get_rema, deconvolute
+from boris.core import get_rema, deconvolute
+from boris.utils import (
+    write_hist,
+    write_hists,
+    read_rebin_spectrum,
+    read_spectrum,
+    shortest_coverage_interval,
+)
 
-logger = logging.getLogger("boris")
+logger = logging.getLogger(__name__)
 
 
 def setup_logging():
@@ -62,203 +69,6 @@ def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
         logger.error(f"{text} failed:")
         logger.error(e, exc_info=True)
         exit(1)
-
-
-def write_hist(
-    histfile: Path, name: str, hist: np.array, bin_edges: np.array
-) -> None:
-    if histfile.exists():
-        raise Exception(f"Error writing {histfile}, already exists.")
-    if histfile.suffix == ".npz":
-        np.savez_compressed(histfile, **{name: hist, "bin_edges": bin_edges,})
-    elif histfile.suffix == ".txt":
-        np.savetxt(
-            histfile,
-            hist,
-            header="bin edges:\n" + str(bin_edges) + f"\n{name}:",
-        )
-    elif histfile.suffix == ".hdf5":
-        try:
-            import h5py
-
-            with h5py.File(histfile, "w") as f:
-                f.create_dataset(
-                    name, data=hist, compression="gzip", compression_opts=9
-                )
-                f.create_dataset(
-                    "bin_edges",
-                    data=bin_edges,
-                    compression="gzip",
-                    compression_opts=9,
-                )
-        except ModuleNotFoundError:
-            raise Exception("Please install h5py to write hdf5 files")
-    elif histfile.suffix == ".root":
-        import uproot
-
-        # TODO: Discard sumw2?
-        if hist.ndim == 1:
-            from uproot_methods.classes.TH1 import from_numpy
-
-            h = from_numpy([hist, bin_edges])
-        else:
-            from uproot_methods.classes.TH2 import from_numpy
-
-            h = from_numpy([hist, np.arange(0, hist.shape[0] + 1), bin_edges])
-        with uproot.create(histfile) as f:
-            f[name] = h
-    else:
-        raise Exception(f"Unknown output format: {histfile.suffix}")
-
-
-def get_bin_edges(
-    hist: np.ndarray,
-) -> Tuple[np.ndarray, Union[None, np.ndarray]]:
-    """Try to determine if hist contains binning information.
-
-    Args:
-        hist: histogram from txt file
-    
-    Returns:
-        Extracted histogram
-        bin edges of histogram or None, if not available
-    """
-    if len(hist.shape) == 1:
-        return hist, None
-    if len(hist.shape) > 2:
-        raise ValueError("Array contains too many dimensions (> 2).")
-    if hist.shape[0] < hist.shape[1]:
-        hist = hist.T
-    if hist.shape[1] >= 3:
-        if hist[:-1, 1] == hist[1:, 0].all():
-            return hist[:, 2], np.concatenate([hist[:, 0], [hist[-1, 1]]])
-        else:
-            raise ValueError(
-                "Lower and upper bin edges (column 0 and 1) are not continuous."
-            )
-    if hist.shape[1] == 2:
-        diff = np.diff(hist[:, 0]) / 2
-        return (
-            hist[:, 1],
-            np.concatenate(
-                [
-                    [hist[0, 0] - diff[0]],
-                    hist[1:, 0] - diff,
-                    [hist[-1, 0] + diff[-1]],
-                ]
-            ),
-        )
-
-
-def read_spectrum(
-    spectrum: Path, histname: Union[None, str] = None
-) -> Tuple[np.ndarray, Union[None, np.ndarray]]:
-    """
-    Read spectrum to numpy array
-
-    Args:
-        spectrum: Path of spectrum file
-        histname: Name of histogram in spectrum file to load (optional)
-    
-    Returns:
-        Extracted histogram
-        Bin edges of spectrum or None, if not available
-    """
-    if spectrum.suffix == ".root":
-        import uproot
-
-        with uproot.open(spectrum) as specfile:
-            if histname:
-                return specfile[histname].numpy()
-            elif len(list(specfile.keys())) == 1:
-                return specfile[list(specfile.keys())[0]].numpy()
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from root file."
-                )
-    elif spectrum.suffix == ".npz":
-        with np.load(spectrum) as specfile:
-            if histname:
-                hist = specfile[histname]
-            elif len(list(specfile.keys())) == 1:
-                hist = specfile[list(specfile.keys())[0]]
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from npz file."
-                )
-    elif spectrum.suffix == ".hdf5":
-        import h5py
-
-        with h5py.File(spectrum) as specfile:
-            if histname:
-                hist = specfile[histname]
-            elif len(list(specfile.keys())) == 1:
-                hist = specfile[list(specfile.keys())[0]]
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from hdf5 file."
-                )
-    else:
-        hist = np.loadtxt(spectrum)
-    return get_bin_edges(hist)
-
-
-def read_pos_int_spectrum(
-    spectrum: Path, histname: Union[None, str] = None, tol: float = 0.001
-) -> Tuple[np.ndarray, Union[None, np.ndarray]]:
-    """
-    Read spectrum to numpy array of type np.integer. The spectrum must
-    contain no negative bins.
-
-    Args:
-        spectrum: Path of spectrum file
-        histname: Name of histogram in spectrum file to load (optional)
-        tol: Maximum sum area difference for integer conversion (optional)
-    
-    Returns:
-        Extracted histogram
-        Bin edges of spectrum or None, if not available
-    """
-    spectrum, spectrum_bin_edges = read_spectrum(spectrum, histname)
-    if not issubclass(spectrum.dtype.type, np.integer):
-        logger.warning("Histogram is not of type integer, converting ...")
-        sum_before = np.sum(spectrum)
-        spectrum = spectrum.astype(np.int64)
-        sum_diff = np.sum(spectrum) - sum_before
-        if sum_diff > tol:
-            raise ValueError(
-                "Histogram area changed by more than {sum_diff:e}."
-            )
-    if (spectrum < 0).any():
-        raise ValueError(
-            "Assuming Poisson distribution, but histogram contains negative bins."
-        )
-    return spectrum, spectrum_bin_edges
-
-
-def read_rebin_spectrum(
-    spectrum: Path,
-    bin_edges_rebin: np.ndarray,
-    histname: Optional[str] = None,
-    cal_bin_centers: Optional[List[float]] = None,
-    cal_bin_edges: Optional[List[float]] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
-    spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
-    if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
-        logger.warning("Ignoring calibration, binnig already provided")
-    if cal_bin_centers is not None:
-        spectrum_bin_edges = np.poly1d(np.array(cal_bin_centers)[::-1])(
-            np.arange(spectrum.size + 1) - 0.5
-        )
-    elif cal_bin_edges is not None:
-        spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
-            np.arange(spectrum.size + 1)
-        )
-
-    if spectrum_bin_edges is not None:
-        spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
-
-    return spectrum, spectrum_bin_edges
 
 
 def boris(
@@ -301,7 +111,7 @@ def boris(
     with do_step(
         f"Reading observed spectrum {observed_spectrum}{print_histname}"
     ):
-        spectrum, spectrum_bin_edges = read_rebin_spectrum(
+        spectrum, _ = read_rebin_spectrum(
             observed_spectrum,
             rema_bin_edges,
             histname,
@@ -353,10 +163,12 @@ def boris(
 
 class BorisApp:
     def __init__(self) -> None:
-        """CLI interface for boris"""
+        """CLI interface for boris."""
         self.parse_args(sys.argv[1:])
         if self.args.seed:
-            with do_step(f"Setting numpy seed to {self.args.seed}", simple=True):
+            with do_step(
+                f"Setting numpy seed to {self.args.seed}", simple=True
+            ):
                 np.random.seed(int(self.args.seed))
         boris(
             self.args.matrix,
@@ -379,7 +191,7 @@ class BorisApp:
         )
 
     def parse_args(self, args: List[str]):
-        """Parse CLI arguments"""
+        """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
@@ -565,7 +377,7 @@ def sirob(
 
 class SirobApp:
     def __init__(self) -> None:
-        """CLI interface for sirob"""
+        """CLI interface for sirob."""
         self.parse_args(sys.argv[1:])
         sirob(
             self.args.matrix,
@@ -583,7 +395,7 @@ class SirobApp:
         )
 
     def parse_args(self, args: List[str]):
-        """Parse CLI arguments"""
+        """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
@@ -668,9 +480,183 @@ class SirobApp:
         self.args = parser.parse_args(args)
 
 
+def boris2spec(
+    incident_spectrum: Path,
+    output_path: Optional[Path] = None,
+    plot: bool = False,
+    get_mean: bool = False,
+    get_median: bool = False,
+    # get_mode: bool = False,
+    get_variance: bool = False,
+    get_std_dev: bool = False,
+    get_sci: bool = False,
+    sci_span: float = np.math.erf(np.sqrt(0.5)),
+) -> None:
+    if not plot and output_path is None:
+        logger.error("Please specify output_path or use --plot option")
+        exit()
+
+    if not (
+        get_mean
+        or get_median
+        # or get_mode
+        or get_variance
+        or get_std_dev
+        or get_sci
+    ):
+        logger.error("Nothing to do, please give some --get-* options")
+        exit()
+
+    if incident_spectrum.suffix == ".root":
+        spec, bins = read_spectrum(Path("test.root"), "incident")
+        _, bin_edges, = bins[0]
+    elif incident_spectrum.suffix in [".hdf5", ".npz"]:
+        spec = read_spectrum(Path("test.hdf5"), "incident", False)
+        bin_edges = read_spectrum(Path("test.hdf5"), "bin_edges", False)
+    else:
+        raise Exception(
+            f"{sys.argv[0]} only supports .root, .npz and .hdf5 files"
+        )
+
+    res = {}
+
+    if get_mean:
+        res["mean"] = np.mean(spec, axis=0)
+
+    if get_median:
+        res["median"] = np.median(spec, axis=0)
+
+    # if get_mode:
+    #    raise NotImplementedError("mode not yet implemented")
+    #    #res["mode"] = get_mode(spec, axis=0)
+
+    if get_variance:
+        res["var"] = np.var(spec, axis=0)
+
+    if get_std_dev:
+        res["std"] = np.std(spec, axis=0)
+
+    if get_sci:
+        res["sci_lo"], res["sci_hi"] = shortest_coverage_interval(
+            spec, span=sci_span
+        )
+
+    if plot:
+        import matplotlib.pyplot as plt
+
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        if get_sci:
+            plt.fill_between(
+                bin_centers,
+                res["sci_lo"],
+                res["sci_hi"],
+                label="Shortest Coverage Interval",
+                step="mid",
+                alpha=0.3,
+            )
+
+        label = {
+            "mean": "Mean",
+            "median": "Median",
+            "mode": "Mode",
+            "std": "Standard Deviation",
+            "var": "Variance",
+        }
+
+        for key in label.keys():
+            if key in res:
+                plt.step(bin_centers, res[key], where="mid", label=label[key])
+
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    if output_path:
+        write_hists(res, bin_edges, output_path)
+
+
+class Boris2SpecApp:
+    def __init__(self) -> None:
+        """CLI interface for boris2spec."""
+        self.parse_args(sys.argv[1:])
+        boris2spec(
+            self.args.incident_spectrum,
+            self.args.output_path,
+            self.args.plot,
+            self.args.get_mean,
+            self.args.get_median,
+            # self.args.get_mode,
+            self.args.get_variance,
+            self.args.get_std_dev,
+            self.args.get_sci,
+            self.args.sci_span,
+        )
+
+    def parse_args(self, args: List[str]):
+        """Parse CLI arguments."""
+        parser = argparse.ArgumentParser(
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        parser.add_argument(
+            "--plot",
+            help="Display a matplotlib plot of the queried spectra",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-mean", help="get the mean for each bin", action="store_true",
+        )
+        # parser.add_argument(
+        #    "--get-mode",
+        #    help="get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
+        #    action="store_true",
+        # )
+        parser.add_argument(
+            "--get-median",
+            help="get the median for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-variance",
+            help="get the variance for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-std-dev",
+            help="get the standard deviation for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-sci",
+            help="get the shortest coverage interval for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--sci-span",
+            metavar="SPAN",
+            help="define the span of the shortest coverage interval",
+            default=np.math.erf(np.sqrt(0.5)),
+        )
+
+        parser.add_argument(
+            "incident_spectrum",
+            help="boris output for incident spectrum",
+            type=Path,
+        )
+        parser.add_argument(
+            "output_path",
+            help="Write resulting spectra to this file (multiple files are created for each exported spectrum if txt format is used)",
+            type=Path,
+            nargs="?",
+        )
+        self.args = parser.parse_args(args)
+
+
 if __name__ == "__main__":
     setup_logging()
     if Path(sys.argv[0]).stem == "sirob":
         SirobApp()
-    else:
+    elif Path(sys.argv[0]).stem == "boris2spec":
+        Boris2SpecApp()
+    if Path(sys.argv[0]).stem == "sirob":
         BorisApp()

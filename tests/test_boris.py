@@ -21,7 +21,7 @@ import pytest
 
 import numpy as np
 
-from boris import rebin_hist, rebin_uniform, get_rema, deconvolute
+from boris import rebin_uniform, get_rema, deconvolute
 
 
 def test_rebin_uniform():
@@ -40,7 +40,7 @@ def test_rebin_uniform_negative():
     hist = np.histogram(data, bin_edges_old)[0]
     hist[0] = -1
     with pytest.raises(ValueError):
-        hist_new = rebin_uniform(hist, bin_edges_old, bin_edges_new)
+        rebin_uniform(hist, bin_edges_old, bin_edges_new)
 
 
 def test_rebin_uniform_non_integer():
@@ -50,7 +50,7 @@ def test_rebin_uniform_non_integer():
     hist = np.histogram(data, bin_edges_old)[0]
     hist = 2.2 * hist.astype("float")
     with pytest.raises(ValueError):
-        hist_new = rebin_uniform(hist, bin_edges_old, bin_edges_new)
+        rebin_uniform(hist, bin_edges_old, bin_edges_new)
 
 
 def test_rebin_uniform_same():

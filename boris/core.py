@@ -69,12 +69,12 @@ def rebin_hist(
 def rebin_uniform(
     hist: np.ndarray, bin_edges: np.ndarray, bin_edges_new: np.ndarray
 ) -> np.ndarray:
-    """
-    Rebin hist with binning bin_edges to bin_edges_new. Each count in
-    the original histogram is randomly placed within the limits of the
-    corresponding bin following a uniform probability distribution.
-    A new histogram with bin edges bin_edges_new is filled with the
-    resulting data.
+    """Rebin hist from binning bin_edges to bin_edges_new.
+    
+    Each count in the original histogram is randomly placed within
+    the limits of the corresponding bin following a uniform probability
+    distribution. A new histogram with bin edges bin_edges_new is
+    filled with the resulting data.
 
     Args:
         hist: Original histogram to rebin.
@@ -103,7 +103,7 @@ def get_rema(
     root file has to contain "rema" and "n_simulated_particles" (TH1).
     The response matrix is cropped to left and right and rebinned to
     bin_width.
-    
+
     Args:
         path: path of root file
         bin_width: rebin matrix to this width

@@ -18,7 +18,8 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 * [numpy](https://numpy.org/)
 * [PyMC3](https://docs.pymc.io/)
 * [uproot](https://github.com/scikit-hep/uproot)
-* [h5py](https://www.h5py.org/) (*optional, to write hdf5 files*)
+* [matplotlib](https://matplotlib.org/) (*optional, for plotting results*)
+* [h5py](https://www.h5py.org/) (*optional, to read and write hdf5 files*)
 
 ## Usage
 
@@ -63,7 +64,7 @@ optional arguments:
 
 A simple convolution of an incident spectrum using the response matrix can be performed using the `sirob` program:
 
-```
+```bash
 $ sirob --help
 usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BIN_WIDTH] [-H HIST] [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST] [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
              --cal-bin-edges C0 [C1 ...]]
@@ -116,6 +117,36 @@ If loaded from a `.txt`, `.npz` or `hdf5` array with more than two columns, the 
 The resulting binning has to be contiguous.
 If only one-column is given, it is assumed, that the binning corresponds to the binning of the `response_matrix`.
 Using `--cal-bin-edges` or `--cal-bin-centers`, it is possible to calibrate an uncalibrated spectrum.
+
+## Output processing
+
+The output of boris consists of the complete generated MCMC chain.
+To allow for an easy and immediate interpretation of the results,
+the `boris2spec` tool is provided:
+
+```bash
+$ boris2spec --help
+usage: boris2spec [-h] [--plot] [--get-mean] [--get-median] [--get-variance] [--get-std-dev] [--get-sci] [--sci-span SPAN] incident_spectrum [output_path]
+
+positional arguments:
+  incident_spectrum  boris output for incident spectrum
+  output_path        Write resulting spectra to this file (multiple files are created for each exported spectrum if txt format is used) (default: None)
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --plot             Display a matplotlib plot of the queried spectra (default: False)
+  --get-mean         get the mean for each bin (default: False)
+  --get-median       get the median for each bin (default: False)
+  --get-variance     get the variance for each bin (default: False)
+  --get-std-dev      get the standard deviation for each bin (default: False)
+  --get-sci          get the shortest coverage interval for each bin (default: False)
+  --sci-span SPAN    define the span of the shortest coverage interval (default: 0.682689492137086)
+```
+
+It can be used to export mean, median, variance, standard deviation and shortest coverage interval (lower and upper limit).
+The `incident_spectrum` argument is the output of a boris run (`.root`, `.hdf5` and `.npz` are supported).
+If the `--plot` argument is provided, the chosen histograms are visualized using matplotlib.
+If `output_path` is provided, the resulting histograms are written to file(s) (`.root`, `.hdf5`, `.npz` and `.txt` are supported).
 
 ## License
 

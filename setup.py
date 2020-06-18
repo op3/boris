@@ -2,7 +2,6 @@
 
 from setuptools import setup
 from pathlib import Path
-import os
 
 here = Path(__file__).parent
 
