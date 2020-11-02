@@ -143,7 +143,7 @@ optional arguments:
   --hdi-prob PROB    HDI prob for which interval will be computed (default: 0.682689492137086)
 ```
 
-It can be used to export mean, median, variance, standard deviation and shortest coverage interval (lower and upper limit).
+It can be used to export mean, median, variance, standard deviation and highest density interval (lower and upper limit).
 The `incident_spectrum` argument is the output of a boris run (`.root`, `.hdf5` and `.npz` are supported).
 If the `--plot` argument is provided, the chosen histograms are visualized using matplotlib.
 If `output_path` is provided, the resulting histograms are written to file(s) (`.root`, `.hdf5`, `.npz` and `.txt` are supported).

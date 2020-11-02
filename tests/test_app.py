@@ -23,11 +23,15 @@ import sys
 
 from boris.app import BorisApp, SirobApp, Boris2SpecApp
 
-@pytest.mark.parametrize("app, name", [
-    (BorisApp, "boris"),
-    (SirobApp, "sirob"),
-    (Boris2SpecApp, "boris2spec"),
-])
+
+@pytest.mark.parametrize(
+    "app, name",
+    [
+        (BorisApp, "boris"),
+        (SirobApp, "sirob"),
+        (Boris2SpecApp, "boris2spec"),
+    ],
+)
 def test_help(app, name):
     sys.argv = ["boris", "--help"]
     with pytest.raises(SystemExit) as pytest_wrapped_e:

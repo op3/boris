@@ -21,7 +21,7 @@ spectroscopy
 """
 
 CLASSIFIERS = """\
-Development Status :: 3 - Alpha
+Development Status :: 4 - Beta
 Environment :: Console
 Intended Audience :: Information Technology
 Intended Audience :: Science/Research
@@ -35,9 +35,9 @@ Programming Language :: C
 Programming Language :: C++
 Programming Language :: Python
 Programming Language :: Python :: 3
-Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
 Topic :: Scientific/Engineering
 Topic :: Scientific/Engineering :: Information Analysis
 Topic :: Scientific/Engineering :: Physics
@@ -45,7 +45,7 @@ Topic :: Scientific/Engineering :: Physics
 
 setup(
     name="hdtv",
-    version="0.1.0",
+    version="0.2.0",
     description="Bayesian deconvolution of nuclear spectra",
     url="https://github.com/op3/boris",
     author="Oliver Papst",
@@ -55,13 +55,19 @@ setup(
     license="GPL",
     classifiers=CLASSIFIERS.strip().split("\n"),
     keywords=KEYWORDS.strip().replace("\n", " "),
-    install_requires=["numpy", "pymc3", "uproot",],
+    install_requires=[
+        "numpy",
+        "pymc3",
+        "uproot",
+    ],
     entry_points={
         "console_scripts": [
             "boris=boris.app:BorisApp",
             "sirob=boris.app:SirobApp",
         ]
     },
-    packages=["boris",],
+    packages=[
+        "boris",
+    ],
     tests_require=["pytest", "pytest-cov"],
 )

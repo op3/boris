@@ -36,7 +36,13 @@ def write_hist(
     if histfile.exists():
         raise Exception(f"Error writing {histfile}, already exists.")
     if histfile.suffix == ".npz":
-        np.savez_compressed(histfile, **{name: hist, "bin_edges": bin_edges,})
+        np.savez_compressed(
+            histfile,
+            **{
+                name: hist,
+                "bin_edges": bin_edges,
+            },
+        )
     elif histfile.suffix == ".txt":
         np.savetxt(
             histfile,
@@ -78,7 +84,9 @@ def write_hist(
 
 
 def write_hists(
-    hists: Dict[str, np.ndarray], bin_edges: np.ndarray, output_path: Path,
+    hists: Dict[str, np.ndarray],
+    bin_edges: np.ndarray,
+    output_path: Path,
 ) -> None:
     if output_path.suffix == ".txt":
         stem = output_path.stem
@@ -125,7 +133,9 @@ def write_hists(
         raise Exception(f"File format {output_path.suffix} not supported.")
 
 
-def get_bin_edges(hist: np.ndarray,) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+def get_bin_edges(
+    hist: np.ndarray,
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """Try to determine if hist contains binning information.
 
     Args:
@@ -163,7 +173,9 @@ def get_bin_edges(hist: np.ndarray,) -> Tuple[np.ndarray, Optional[np.ndarray]]:
 
 
 def read_spectrum(
-    spectrum: Path, histname: Optional[str] = None, bin_edges: bool = True,
+    spectrum: Path,
+    histname: Optional[str] = None,
+    bin_edges: bool = True,
 ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """Read spectrum to numpy array
 
@@ -228,7 +240,7 @@ def read_pos_int_spectrum(
         spectrum: Path of spectrum file
         histname: Name of histogram in spectrum file to load (optional)
         tol: Maximum sum area difference for integer conversion (optional)
-    
+
     Returns:
         Extracted histogram
         Bin edges of spectrum or None, if not available

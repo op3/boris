@@ -509,7 +509,10 @@ def boris2spec(
 
     if incident_spectrum.suffix == ".root":
         spec, bins = read_spectrum(incident_spectrum, "incident")
-        _, bin_edges, = bins[0]
+        (
+            _,
+            bin_edges,
+        ) = bins[0]
     elif incident_spectrum.suffix in [".hdf5", ".npz"]:
         spec = read_spectrum(incident_spectrum, "incident", False)
         bin_edges = read_spectrum(incident_spectrum, "bin_edges", False)
@@ -537,9 +540,7 @@ def boris2spec(
         res["std"] = np.std(spec, axis=0)
 
     if get_hdi:
-        res["hdi_lo"], res["hdi_hi"] = hdi(
-            spec, hdi_prob=hdi_prob
-        )
+        res["hdi_lo"], res["hdi_hi"] = hdi(spec, hdi_prob=hdi_prob)
 
     if plot:
         import matplotlib.pyplot as plt
@@ -604,7 +605,9 @@ class Boris2SpecApp:
             action="store_true",
         )
         parser.add_argument(
-            "--get-mean", help="get the mean for each bin", action="store_true",
+            "--get-mean",
+            help="get the mean for each bin",
+            action="store_true",
         )
         # parser.add_argument(
         #    "--get-mode",

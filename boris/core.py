@@ -70,7 +70,7 @@ def rebin_uniform(
     hist: np.ndarray, bin_edges: np.ndarray, bin_edges_new: np.ndarray
 ) -> np.ndarray:
     """Rebin hist from binning bin_edges to bin_edges_new.
-    
+
     Each count in the original histogram is randomly placed within
     the limits of the corresponding bin following a uniform probability
     distribution. A new histogram with bin edges bin_edges_new is
@@ -198,7 +198,9 @@ def deconvolute(
         # Measured data
         if background is not None:
             background_obs = pm.Poisson(
-                "background_obs", background_inc, observed=background,
+                "background_obs",
+                background_inc,
+                observed=background,
             )
         observation = pm.Poisson(
             "spectrum_obs", spectrum_detector, observed=spectrum
