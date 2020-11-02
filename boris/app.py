@@ -658,5 +658,5 @@ if __name__ == "__main__":
         SirobApp()
     elif Path(sys.argv[0]).stem == "boris2spec":
         Boris2SpecApp()
-    if Path(sys.argv[0]).stem == "sirob":
+    if Path(sys.argv[0]).stem == "boris":
         BorisApp()
