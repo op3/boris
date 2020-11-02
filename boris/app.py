@@ -508,11 +508,11 @@ def boris2spec(
         exit()
 
     if incident_spectrum.suffix == ".root":
-        spec, bins = read_spectrum(Path("test.root"), "incident")
+        spec, bins = read_spectrum(incident_spectrum, "incident")
         _, bin_edges, = bins[0]
     elif incident_spectrum.suffix in [".hdf5", ".npz"]:
-        spec = read_spectrum(Path("test.hdf5"), "incident", False)
-        bin_edges = read_spectrum(Path("test.hdf5"), "bin_edges", False)
+        spec = read_spectrum(incident_spectrum, "incident", False)
+        bin_edges = read_spectrum(incident_spectrum, "bin_edges", False)
     else:
         raise Exception(
             f"{sys.argv[0]} only supports .root, .npz and .hdf5 files"
