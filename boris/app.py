@@ -42,7 +42,7 @@ from boris.utils import (
     write_hists,
     read_rebin_spectrum,
     read_spectrum,
-    shortest_coverage_interval,
+    hdi,
 )
 
 logger = logging.getLogger(__name__)
@@ -489,8 +489,8 @@ def boris2spec(
     # get_mode: bool = False,
     get_variance: bool = False,
     get_std_dev: bool = False,
-    get_sci: bool = False,
-    sci_span: float = np.math.erf(np.sqrt(0.5)),
+    get_hdi: bool = False,
+    hdi_prob: float = np.math.erf(np.sqrt(0.5)),
 ) -> None:
     if not plot and output_path is None:
         logger.error("Please specify output_path or use --plot option")
@@ -502,7 +502,7 @@ def boris2spec(
         # or get_mode
         or get_variance
         or get_std_dev
-        or get_sci
+        or get_hdi
     ):
         logger.error("Nothing to do, please give some --get-* options")
         exit()
@@ -536,9 +536,9 @@ def boris2spec(
     if get_std_dev:
         res["std"] = np.std(spec, axis=0)
 
-    if get_sci:
-        res["sci_lo"], res["sci_hi"] = shortest_coverage_interval(
-            spec, span=sci_span
+    if get_hdi:
+        res["hdi_lo"], res["hdi_hi"] = hdi(
+            spec, hdi_prob=hdi_prob
         )
 
     if plot:
@@ -546,12 +546,12 @@ def boris2spec(
 
         bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-        if get_sci:
+        if get_hdi:
             plt.fill_between(
                 bin_centers,
-                res["sci_lo"],
-                res["sci_hi"],
-                label="Shortest Coverage Interval",
+                res["hdi_lo"],
+                res["hdi_hi"],
+                label="Highest Density Interval",
                 step="mid",
                 alpha=0.3,
             )
@@ -589,8 +589,8 @@ class Boris2SpecApp:
             # self.args.get_mode,
             self.args.get_variance,
             self.args.get_std_dev,
-            self.args.get_sci,
-            self.args.sci_span,
+            self.args.get_hdi,
+            self.args.hdi_prob,
         )
 
     def parse_args(self, args: List[str]):
@@ -627,14 +627,14 @@ class Boris2SpecApp:
             action="store_true",
         )
         parser.add_argument(
-            "--get-sci",
-            help="get the shortest coverage interval for each bin",
+            "--get-hdi",
+            help="get the highest density interval for each bin",
             action="store_true",
         )
         parser.add_argument(
-            "--sci-span",
-            metavar="SPAN",
-            help="define the span of the shortest coverage interval",
+            "--hdi-prob",
+            metavar="PROB",
+            help="HDI prob for which interval will be computed",
             default=np.math.erf(np.sqrt(0.5)),
         )
 

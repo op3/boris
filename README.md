@@ -126,7 +126,7 @@ the `boris2spec` tool is provided:
 
 ```bash
 $ boris2spec --help
-usage: boris2spec [-h] [--plot] [--get-mean] [--get-median] [--get-variance] [--get-std-dev] [--get-sci] [--sci-span SPAN] incident_spectrum [output_path]
+usage: boris2spec [-h] [--plot] [--get-mean] [--get-median] [--get-variance] [--get-std-dev] [--get-hdi] [--hdi-prob PROB] incident_spectrum [output_path]
 
 positional arguments:
   incident_spectrum  boris output for incident spectrum
@@ -139,8 +139,8 @@ optional arguments:
   --get-median       get the median for each bin (default: False)
   --get-variance     get the variance for each bin (default: False)
   --get-std-dev      get the standard deviation for each bin (default: False)
-  --get-sci          get the shortest coverage interval for each bin (default: False)
-  --sci-span SPAN    define the span of the shortest coverage interval (default: 0.682689492137086)
+  --get-hdi          get the highest density interval for each bin (default: False)
+  --hdi-prob PROB    HDI prob for which interval will be computed (default: 0.682689492137086)
 ```
 
 It can be used to export mean, median, variance, standard deviation and shortest coverage interval (lower and upper limit).

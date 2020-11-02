@@ -275,9 +275,12 @@ def read_rebin_spectrum(
     return spectrum, spectrum_bin_edges
 
 
-def shortest_coverage_interval(sample, span=np.math.erf(np.sqrt(0.5))):
+def hdi(sample, hdi_prob=np.math.erf(np.sqrt(0.5))):
+    """
+    Calculate highest density interval (HDI) of sample for given probability
+    """
     sample.sort(axis=0)
-    interval = int(np.ceil(len(sample) * (1 - span)))
+    interval = int(np.ceil(len(sample) * (1 - hdi_prob)))
     candidates = sample[-interval:] - sample[:interval]
     best = candidates.argmin()
     return (sample[best], sample[best - interval])
