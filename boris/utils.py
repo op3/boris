@@ -20,7 +20,7 @@
 """Utils for input and output preparation."""
 
 import logging
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Callable
 from pathlib import Path
 
 import numpy as np
@@ -268,6 +268,7 @@ def read_rebin_spectrum(
     histname: Optional[str] = None,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
+    filter: Optional[Callable[[np.ndarray], np.ndarray]] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
     if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
@@ -280,6 +281,9 @@ def read_rebin_spectrum(
         spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
             np.arange(spectrum.size + 1)
         )
+
+    if filter is not None:
+        spectrum = filter(spectrum)
 
     if spectrum_bin_edges is not None:
         spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
