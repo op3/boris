@@ -20,7 +20,7 @@
 """Utils for input and output preparation."""
 
 import logging
-from typing import List, Optional, Tuple, Dict, Callable, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from pathlib import Path
 
 import numpy as np
@@ -41,8 +41,6 @@ def numpy_to_root_hist(
     Returns:
         root histogram with bin_edges
     """
-    import uproot3 as uproot
-
     # TODO: Discard sumw2?
     if hist.ndim == 1:
         from uproot3_methods.classes.TH1 import from_numpy
@@ -113,8 +111,9 @@ def write_hist(
                         compression="gzip",
                         compression_opts=9,
                     )
-        except ModuleNotFoundError:
-            raise Exception("Please install h5py to write hdf5 files")
+        except ModuleNotFoundError as err:
+            logger.error("Please install h5py to write hdf5 files")
+            raise err
     elif histfile.suffix == ".root":
         with uproot.create(histfile) as f:
             f[name] = numpy_to_root_hist(hist, bin_edges)
@@ -127,7 +126,7 @@ def write_hists(
     bin_edges: np.ndarray,
     output_path: Path,
 ) -> None:
-    """Write multiple histograms to file"""
+    """Write multiple histograms to file."""
     if output_path.suffix == ".txt":
         stem = output_path.stem
         bins_lo = bin_edges[:-1]
@@ -160,8 +159,9 @@ def write_hists(
                         compression="gzip",
                         compression_opts=9,
                     )
-        except ModuleNotFoundError:
-            raise Exception("Please install h5py to write hdf5 files")
+        except ModuleNotFoundError as err:
+            logger.error("Please install h5py to write hdf5 files")
+            raise err
     else:
         raise Exception(f"File format {output_path.suffix} not supported.")
 
@@ -205,12 +205,35 @@ def get_bin_edges(
         )
 
 
+def get_obj_by_name(
+    mapping: Mapping[str, Any], name: Optional[str] = None
+) -> Any:
+    """Return object from mapping
+
+    If a name is provided, the object is returned by name. If no name
+    is provided and the mapping contains only one object, this object
+    is returned.
+
+    Args:
+        mapping: Mapping such as dictionary or uproot-file
+        name: Optional name of object to return
+    Returns:
+        Object, if a unique mapping is found
+    """
+    if name:
+        return mapping[name]
+    elif len(list(mapping.keys())) == 1:
+        return mapping[list(mapping.keys())[0]]
+    else:
+        raise Exception("Please provide name of object")
+
+
 def read_spectrum(
     spectrum: Path,
     histname: Optional[str] = None,
     bin_edges: bool = True,
 ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """Read spectrum to numpy array
+    """Read spectrum to numpy array.
 
     Args:
         spectrum: Path of spectrum file
@@ -225,36 +248,19 @@ def read_spectrum(
         import uproot3 as uproot
 
         with uproot.open(spectrum) as specfile:
-            if histname:
-                return specfile[histname].numpy()
-            elif len(list(specfile.keys())) == 1:
-                return specfile[list(specfile.keys())[0]].numpy()
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from root file."
-                )
+            return get_obj_by_name(specfile, name).numpy()
     elif spectrum.suffix == ".npz":
         with np.load(spectrum) as specfile:
-            if histname:
-                hist = specfile[histname]
-            elif len(list(specfile.keys())) == 1:
-                hist = specfile[list(specfile.keys())[0]]
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from npz file."
-                )
+            hist = get_obj_by_name(specfile, histname)
     elif spectrum.suffix == ".hdf5":
-        import h5py
+        try:
+            import h5py
 
-        with h5py.File(spectrum, "r") as specfile:
-            if histname:
-                hist = specfile[histname][()]
-            elif len(list(specfile.keys())) == 1:
-                hist = specfile[list(specfile.keys())[0]][()]
-            else:
-                raise Exception(
-                    "Please provide name of histogram to read from hdf5 file."
-                )
+            with h5py.File(spectrum, "r") as specfile:
+                hist = get_obj_by_name(specfile, histname)[()]
+        except ModuleNotFoundError as err:
+            logger.error("Please install h5py to read .hdf5 files")
+            raise err
     else:
         hist = np.loadtxt(spectrum)
     if bin_edges:
@@ -301,8 +307,21 @@ def read_rebin_spectrum(
     histname: Optional[str] = None,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
-    filter: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+    filter_spectrum: Optional[Callable[[np.ndarray], np.ndarray]] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """Read and rebin spectrum.
+
+    Args:
+        spectrum: Path to file containing spectrum
+        bin_edges_rebin: Rebin spectrum to this bin_edges array
+        histname: Provide object name for files containing multiple objects
+        cal_bin_centers: Bin centers to calibrate spectrum before rebinning
+        cal_bin_edges: Bin edges to calibrate spectrum before rebinning
+        filter_spectrum: Apply filter function to spetrum before rebinning
+    Returns:
+        Histogram
+        Bin edges
+    """
     spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
     if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
         logger.warning("Ignoring calibration, binnig already provided")
@@ -315,8 +334,8 @@ def read_rebin_spectrum(
             np.arange(spectrum.size + 1)
         )
 
-    if filter is not None:
-        spectrum = filter(spectrum)
+    if filter_spectrum is not None:
+        spectrum = filter_spectrum(spectrum)
 
     if spectrum_bin_edges is not None:
         spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)

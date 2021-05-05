@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging():
+    """Prepare logger, set message format"""
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
@@ -57,12 +58,13 @@ def setup_logging():
 
 @contextlib.contextmanager
 def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
+    """Contextmanager to print helpful progress messages"""
     if not simple:
         logger.info(f"{text} ...")
     try:
         yield
         if simple:
-            logger.info(f"{text}")
+            logger.info(text)
         else:
             logger.info(f"{text} complete")
     except BaseException as e:
@@ -90,8 +92,7 @@ def boris(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
 ) -> None:
-    """
-    Load response matrix and spectrum, sample MCMC chain,
+    """Load response matrix and spectrum, sample MCMC chain,
     write resulting trace to file.
 
     Args:
@@ -142,7 +143,7 @@ def boris(
                     cal_bin_edges,
                 )
 
-    with do_step(f"🎲 Sampling from posterior distribution"):
+    with do_step("🎲 Sampling from posterior distribution"):
         trace = deconvolute(
             rema,
             spectrum,
@@ -492,6 +493,19 @@ def boris2spec(
     get_hdi: bool = False,
     hdi_prob: float = np.math.erf(np.sqrt(0.5)),
 ) -> None:
+    """Create spectra from boris trace file
+
+    Args:
+        incident_spectrum: boris output for incident spectrum
+        output_path: Optionally write generated spectra to file
+        plot: Optionally display matplotlib window of all spectra
+        get_mean: Generate spectrum containing mean of each bin
+        get_median: Generate spectrum containing median of each bin
+        get_variance: Generate spectrum containing variane of each bin
+        get_std_dev: Generate spectrum containing standard deviation of each bin
+        get_hdi: Generate spectra containing highest density interval of each bin
+        hdi_prob: Probability for which the highest density interval will be computed
+    """
     if not plot and output_path is None:
         logger.error("Please specify output_path or use --plot option")
         exit()
