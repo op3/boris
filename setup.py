@@ -58,12 +58,13 @@ setup(
     install_requires=[
         "numpy",
         "pymc3",
-        "uproot",
+        "uproot3",
     ],
     entry_points={
         "console_scripts": [
             "boris=boris.app:BorisApp",
             "sirob=boris.app:SirobApp",
+            "boris2spec=boris.app:Boris2SpecApp",
         ]
     },
     packages=[

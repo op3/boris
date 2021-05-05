@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: GPL-3.0+
 #
-# Copyright © 2020 O. Papst.
+# Copyright © 2020–2021 O. Papst.
 #
 # This file is part of boris.
 #
@@ -26,7 +26,7 @@ import numpy as np
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 
-import uproot
+import uproot3 as uproot
 
 
 def rebin_hist(

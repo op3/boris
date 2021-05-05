@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: GPL-3.0+
 #
-# Copyright © 2020 O. Papst.
+# Copyright © 2020–2021 O. Papst.
 #
 # This file is part of boris.
 #
@@ -20,7 +20,7 @@
 """Utils for input and output preparation."""
 
 import logging
-from typing import List, Optional, Tuple, Dict, Callable
+from typing import List, Optional, Tuple, Dict, Callable, Union
 from pathlib import Path
 
 import numpy as np
@@ -30,9 +30,54 @@ from boris.core import rebin_uniform
 logger = logging.getLogger(__name__)
 
 
+def numpy_to_root_hist(
+    hist: np.ndarray, bin_edges: Union[np.ndarray, Tuple[np.ndarray]]
+) -> "uproot.rootio.ROOTDirectory":
+    """
+    Convert numpy histogram with bin edges to root histogram (TH1 or TH2)
+    Args:
+        hist: histogram
+        bin_edges: numpy array or tuple of numpy arrays containing bin edges
+    Returns:
+        root histogram with bin_edges
+    """
+    import uproot3 as uproot
+
+    # TODO: Discard sumw2?
+    if hist.ndim == 1:
+        from uproot3_methods.classes.TH1 import from_numpy
+
+        h = from_numpy([hist, bin_edges])
+    else:
+        from uproot3_methods.classes.TH2 import from_numpy
+
+        if isinstance(bin_edges, tuple):
+            h = from_numpy([hist, *bin_edges])
+        else:
+            h = from_numpy([hist, np.arange(0, hist.shape[0] + 1), bin_edges])
+    return h
+
+
+def _bin_edges_dict(
+    bin_edges: Union[np.ndarray, Tuple[np.ndarray]],
+) -> Dict[str, np.ndarray]:
+    """
+    Create dictionary of multiple bin_edges arrays for file formats
+    that don’t support expliciting writing bin_edges.
+    """
+    if isinstance(bin_edges, tuple):
+        return {f"bin_edges_{i}": bin_edges_i for i, bin_edges_i in bin_edges}
+    else:
+        return {"bin_edges": bin_edges}
+
+
 def write_hist(
-    histfile: Path, name: str, hist: np.array, bin_edges: np.array
+    histfile: Path,
+    name: str,
+    hist: np.array,
+    bin_edges: Union[np.array, Tuple[np.array]],
 ) -> None:
+    """Write single histogram to file"""
     if histfile.exists():
         raise Exception(f"Error writing {histfile}, already exists.")
     if histfile.suffix == ".npz":
@@ -40,10 +85,14 @@ def write_hist(
             histfile,
             **{
                 name: hist,
-                "bin_edges": bin_edges,
+                **_bin_edges_dict(bin_edges),
             },
         )
     elif histfile.suffix == ".txt":
+        if hist.ndim > 1:
+            raise Exception(
+                f"Writing {hist.ndim}-dimensional histograms to txt not supported."
+            )
         np.savetxt(
             histfile,
             hist,
@@ -57,28 +106,18 @@ def write_hist(
                 f.create_dataset(
                     name, data=hist, compression="gzip", compression_opts=9
                 )
-                f.create_dataset(
-                    "bin_edges",
-                    data=bin_edges,
-                    compression="gzip",
-                    compression_opts=9,
-                )
+                for key, arr in _bin_edges_dict(bin_edges):
+                    f.create_dataset(
+                        key,
+                        data=arr,
+                        compression="gzip",
+                        compression_opts=9,
+                    )
         except ModuleNotFoundError:
             raise Exception("Please install h5py to write hdf5 files")
     elif histfile.suffix == ".root":
-        import uproot
-
-        # TODO: Discard sumw2?
-        if hist.ndim == 1:
-            from uproot_methods.classes.TH1 import from_numpy
-
-            h = from_numpy([hist, bin_edges])
-        else:
-            from uproot_methods.classes.TH2 import from_numpy
-
-            h = from_numpy([hist, np.arange(0, hist.shape[0] + 1), bin_edges])
         with uproot.create(histfile) as f:
-            f[name] = h
+            f[name] = numpy_to_root_hist(hist, bin_edges)
     else:
         raise Exception(f"Unknown output format: {histfile.suffix}")
 
@@ -88,6 +127,7 @@ def write_hists(
     bin_edges: np.ndarray,
     output_path: Path,
 ) -> None:
+    """Write multiple histograms to file"""
     if output_path.suffix == ".txt":
         stem = output_path.stem
         bins_lo = bin_edges[:-1]
@@ -99,20 +139,20 @@ def write_hists(
                 header=f"bin_edges_low, bin_edges_high, {key}",
             )
     elif output_path.suffix == ".npz":
-        hists["bin_edges"] = bin_edges
+        hists.extend = _bin_edges_dict(bin_edges)
         np.savez_compressed(output_path, **hists)
     elif output_path.suffix == ".root":
-        import uproot
-        from uproot_methods.classes.TH1 import from_numpy
+        import uproot3 as uproot
 
         with uproot.create(output_path) as f:
             for key, outspec in hists.items():
-                f[key] = from_numpy([outspec, bin_edges])
+                f[key] = numpy_to_root_hist(outspec, bin_edges)
     elif output_path.suffix == ".hdf5":
         try:
             import h5py
 
             with h5py.File(output_path, "w") as f:
+                hists.extend = _bin_edges_dict(bin_edges)
                 for key, outspec in hists.items():
                     f.create_dataset(
                         key,
@@ -120,13 +160,6 @@ def write_hists(
                         compression="gzip",
                         compression_opts=9,
                     )
-
-                f.create_dataset(
-                    "bin_edges",
-                    data=bin_edges,
-                    compression="gzip",
-                    compression_opts=9,
-                )
         except ModuleNotFoundError:
             raise Exception("Please install h5py to write hdf5 files")
     else:
@@ -189,7 +222,7 @@ def read_spectrum(
         Bin edges of spectrum or None, if not available
     """
     if spectrum.suffix == ".root":
-        import uproot
+        import uproot3 as uproot
 
         with uproot.open(spectrum) as specfile:
             if histname:
@@ -268,7 +301,7 @@ def read_rebin_spectrum(
     histname: Optional[str] = None,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
-    filter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+    filter: Optional[Callable[[np.ndarray], np.ndarray]] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
     if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
