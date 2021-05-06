@@ -150,7 +150,7 @@ If `output_path` is provided, the resulting histograms are written to file(s) (`
 
 ## License
 
-Copyright © 2020
+Copyright © 2020–2021
 
 Oliver Papst `<opapst@ikp.tu-darmstadt.de>`
 

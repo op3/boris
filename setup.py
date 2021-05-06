@@ -44,7 +44,7 @@ Topic :: Scientific/Engineering :: Physics
 """
 
 setup(
-    name="hdtv",
+    name="boris",
     version="0.2.0",
     description="Bayesian deconvolution of nuclear spectra",
     url="https://github.com/op3/boris",
@@ -55,6 +55,7 @@ setup(
     license="GPL",
     classifiers=CLASSIFIERS.strip().split("\n"),
     keywords=KEYWORDS.strip().replace("\n", " "),
+    python_requires=">=3.6",
     install_requires=[
         "numpy",
         "pymc3",
