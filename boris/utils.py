@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 
 
 def numpy_to_root_hist(
-    hist: np.ndarray, bin_edges: Union[np.ndarray, Tuple[np.ndarray]]
+    hist: np.ndarray,
+    bin_edges: Union[np.ndarray, Tuple[np.ndarray], List[np.ndarray]],
 ) -> "uproot.rootio.ROOTDirectory":
     """
     Convert numpy histogram with bin edges to root histogram (TH1 or TH2)
@@ -49,22 +50,33 @@ def numpy_to_root_hist(
     else:
         from uproot3_methods.classes.TH2 import from_numpy
 
-        if isinstance(bin_edges, tuple):
+        if isinstance(bin_edges, (list, tuple)):
             h = from_numpy([hist, *bin_edges])
         else:
             h = from_numpy([hist, np.arange(0, hist.shape[0] + 1), bin_edges])
+    del h._fTsumwx
+    del h._fTsumwx2
+    del h._fTsumwy
+    del h._fTsumwy2
+    del h._fTsumwxy
+    del h._fTsumw
+    del h._fTsumw2
+    del h._fSumw2
     return h
 
 
 def _bin_edges_dict(
-    bin_edges: Union[np.ndarray, Tuple[np.ndarray]],
+    bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
 ) -> Dict[str, np.ndarray]:
     """
     Create dictionary of multiple bin_edges arrays for file formats
     that don’t support expliciting writing bin_edges.
     """
-    if isinstance(bin_edges, tuple):
-        return {f"bin_edges_{i}": bin_edges_i for i, bin_edges_i in bin_edges}
+    if isinstance(bin_edges, (list, tuple)):
+        return {
+            f"bin_edges_{i}": bin_edges_i
+            for i, bin_edges_i in enumerate(bin_edges)
+        }
     else:
         return {"bin_edges": bin_edges}
 
@@ -73,7 +85,7 @@ def write_hist(
     histfile: Path,
     name: str,
     hist: np.array,
-    bin_edges: Union[np.array, Tuple[np.array]],
+    bin_edges: Union[np.array, List[np.ndarray], Tuple[np.array]],
 ) -> None:
     """Write single histogram to file"""
     if histfile.exists():
@@ -115,7 +127,11 @@ def write_hist(
             logger.error("Please install h5py to write hdf5 files")
             raise err
     elif histfile.suffix == ".root":
-        with uproot.create(histfile) as f:
+        import uproot3 as uproot
+
+        with uproot.recreate(
+            histfile, compression=uproot.write.compress.LZMA(6)
+        ) as f:
             f[name] = numpy_to_root_hist(hist, bin_edges)
     else:
         raise Exception(f"Unknown output format: {histfile.suffix}")
@@ -123,7 +139,7 @@ def write_hist(
 
 def write_hists(
     hists: Dict[str, np.ndarray],
-    bin_edges: np.ndarray,
+    bin_edges: Union[np.ndarray, List[np.ndarray]],
     output_path: Path,
 ) -> None:
     """Write multiple histograms to file."""
@@ -138,12 +154,16 @@ def write_hists(
                 header=f"bin_edges_low, bin_edges_high, {key}",
             )
     elif output_path.suffix == ".npz":
-        hists.extend = _bin_edges_dict(bin_edges)
+        hists.update(_bin_edges_dict(bin_edges))
         np.savez_compressed(output_path, **hists)
     elif output_path.suffix == ".root":
         import uproot3 as uproot
 
-        with uproot.create(output_path) as f:
+        with uproot.recreate(
+            output_path, compression=uproot.write.compress.LZMA(6)
+        ) as f:
+            print(f.compression)
+            print(f.compression)
             for key, outspec in hists.items():
                 f[key] = numpy_to_root_hist(outspec, bin_edges)
     elif output_path.suffix == ".hdf5":
@@ -151,7 +171,7 @@ def write_hists(
             import h5py
 
             with h5py.File(output_path, "w") as f:
-                hists.extend = _bin_edges_dict(bin_edges)
+                hists.update(_bin_edges_dict(bin_edges))
                 for key, outspec in hists.items():
                     f.create_dataset(
                         key,
@@ -164,6 +184,17 @@ def write_hists(
             raise err
     else:
         raise Exception(f"File format {output_path.suffix} not supported.")
+
+
+def get_filetype(path: Path) -> Optional[str]:
+    """Determine file format of path using magic bytes"""
+    with open(path, "rb") as f:
+        header = f.read(4)
+        return {
+            b"PK\x03\x04": "application/zip",
+            b"root": "application/root",
+            b"\xd3HDF": "application/x-hdf5",
+        }.get(header, None)
 
 
 def get_bin_edges(
@@ -222,10 +253,45 @@ def get_obj_by_name(
     """
     if name:
         return mapping[name]
-    elif len(list(mapping.keys())) == 1:
-        return mapping[list(mapping.keys())[0]]
-    else:
-        raise Exception("Please provide name of object")
+    keys = [key for key in mapping.keys() if not key.startswith("bin_edges")]
+
+    if len(keys) == 1:
+        return mapping[keys[0]]
+    raise KeyError("Please provide name of object")
+
+
+def get_obj_bin_edges(mapping: Mapping[str, Any]) -> List[np.ndarray]:
+    if "bin_edges" in mapping:
+        return [mapping["bin_edges"]]
+    bin_edges_keys = sorted(
+        [key for key in mapping.keys() if key.startswith("bin_edges_")]
+    )
+    if bin_edges_keys:
+        return [mapping[key] for key in bin_edges_keys]
+    raise KeyError("Object does not contain bin_edges.")
+
+
+def get_keys_in_container(path: Path) -> List[str]:
+    """Return all keys that are available in container"""
+    filetype = get_filetype(path)
+    if filetype == "application/root":
+        import uproot
+
+        with uproot.open(path) as container:
+            return container.iterkeys(cycle=False)
+    elif filetype == "application/zip":
+        with np.load(path) as container:
+            return container.keys()
+    elif filetype == "application/x-hdf5":
+        try:
+            import h5py
+
+            with h5py.File(path, "r") as container:
+                return container.keys()
+        except ModuleNotFoundError as err:
+            logger.error("Please install h5py to read .hdf5 files")
+            raise err
+    return []
 
 
 def read_spectrum(
@@ -244,20 +310,34 @@ def read_spectrum(
         Extracted histogram
         Bin edges of spectrum or None, if not available
     """
-    if spectrum.suffix == ".root":
-        import uproot3 as uproot
+    filetype = get_filetype(spectrum)
+    if filetype == "application/root":
+        import uproot
 
         with uproot.open(spectrum) as specfile:
-            return get_obj_by_name(specfile, name).numpy()
-    elif spectrum.suffix == ".npz":
+            return get_obj_by_name(specfile, histname).to_numpy()
+    elif filetype == "application/zip":
         with np.load(spectrum) as specfile:
             hist = get_obj_by_name(specfile, histname)
-    elif spectrum.suffix == ".hdf5":
+            if bin_edges:
+                try:
+                    return [hist, get_obj_bin_edges(specfile)]
+                except KeyError:
+                    pass
+    elif filetype == "application/x-hdf5":
         try:
             import h5py
 
             with h5py.File(spectrum, "r") as specfile:
                 hist = get_obj_by_name(specfile, histname)[()]
+                if bin_edges:
+                    try:
+                        return [
+                            hist,
+                            [a[()] for a in get_obj_bin_edges(specfile)],
+                        ]
+                    except KeyError:
+                        pass
         except ModuleNotFoundError as err:
             logger.error("Please install h5py to read .hdf5 files")
             raise err
@@ -343,7 +423,10 @@ def read_rebin_spectrum(
     return spectrum, spectrum_bin_edges
 
 
-def hdi(sample, hdi_prob=np.math.erf(np.sqrt(0.5))):
+def hdi(
+    sample: np.ndarray,
+    hdi_prob: Union[float, np.number] = np.math.erf(np.sqrt(0.5)),
+) -> Tuple[float, float]:
     """
     Calculate highest density interval (HDI) of sample for given probability
     """
