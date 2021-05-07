@@ -60,6 +60,7 @@ setup(
         "numpy",
         "pymc3",
         "uproot3",
+        "uproot",
     ],
     entry_points={
         "console_scripts": [

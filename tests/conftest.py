@@ -17,24 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
-
+import os
 import sys
 
-from boris.app import BorisApp, SirobApp, Boris2SpecApp
-
-
-@pytest.mark.parametrize(
-    "app, name",
-    [
-        (BorisApp, "boris"),
-        (SirobApp, "sirob"),
-        (Boris2SpecApp, "boris2spec"),
-    ],
-)
-def test_help(app, name):
-    sys.argv = ["boris", "--help"]
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        app()
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 0
+sys.path.append(os.path.join(os.path.dirname(__file__), "helpers"))

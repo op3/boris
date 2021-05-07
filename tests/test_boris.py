@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: GPL-3.0+
 #
-# Copyright © 2020 O. Papst.
+# Copyright © 2020–2021 O. Papst.
 #
 # This file is part of boris.
 #
