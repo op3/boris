@@ -17,6 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
+import sys
+import contextlib
 
-import numpy as np
+
+@contextlib.contextmanager
+def hide_module(module):
+    try:
+        old = sys.modules[module]
+    except:
+        sys.modules[module] = None
+        yield
+        del sys.modules[module]
+        return
+    sys.modules[module] = None
+    yield
+    sys.modules[module] = old

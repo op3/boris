@@ -52,7 +52,7 @@ class SimInfo:
     def from_dat_file_line(cls, line: str, sim_root: Path) -> SimInfo:
         """Create SimInfo object from dat_file line"""
         path, energy, nevents = line.split(" ")
-        return cls(sim_root / path, float(energy), int(nevents))
+        return cls(sim_root / path.rstrip(":"), float(energy), int(nevents))
 
 
 def read_dat_file(

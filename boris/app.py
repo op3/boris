@@ -36,8 +36,9 @@ if __name__ == "__main__":
         sys.path.remove(project_path)
     sys.path.insert(0, str(project_dir))
 
-from boris.core import get_rema, deconvolute
+from boris.core import deconvolute
 from boris.utils import (
+    get_rema,
     write_hist,
     write_hists,
     read_rebin_spectrum,
