@@ -32,10 +32,13 @@ from boris.utils import (
     get_rema,
     _bin_edges_dict,
     hdi,
+    get_bin_edges,
+    get_filetype,
     get_obj_by_name,
     get_obj_bin_edges,
     numpy_to_root_hist,
     write_hist,
+    write_hists,
 )
 
 
@@ -151,19 +154,137 @@ def test_write_hist_without_h5py(tmp_path):
             write_hist(tmp_path / "test.hdf5", "test", hist, bin_edges)
 
 
-@pytest.mark.skip
-def test_write_hists():
-    ...
+@pytest.mark.parametrize(
+    "filename",
+    [
+        ("test.root"),
+        ("test.npz"),
+        pytest.param(
+            ("test.hdf5"),
+            marks=pytest.mark.skipif(
+                find_spec("h5py") is None, reason="Module h5py not installed"
+            ),
+        ),
+    ],
+)
+def test_write_hists_1D(tmp_path, filename):
+    hists = {f"hist{i}": np.random.uniform(size=100) for i in range(4)}
+    bin_edges = np.linspace(0, 100, 101)
+    write_hists(hists, bin_edges, tmp_path / filename)
+    assert (tmp_path / filename).exists()
 
 
-@pytest.mark.skip
-def test_get_filetype():
-    ...
+@pytest.mark.parametrize(
+    "filename",
+    [
+        ("test.root"),
+        ("test.npz"),
+        pytest.param(
+            "test.hdf5",
+            marks=pytest.mark.skipif(
+                find_spec("h5py") is None, reason="Module h5py not installed"
+            ),
+        ),
+    ],
+)
+def test_write_hists_2D(tmp_path, filename):
+    hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
+    bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]
+    write_hists(hists, bin_edges, tmp_path / filename)
+    assert (tmp_path / filename).exists()
 
 
-@pytest.mark.skip
-def test_get_bin_edges():
-    ...
+def test_write_hists_txt(tmp_path):
+    hists = {f"hist{i}": np.random.uniform(size=100) for i in range(4)}
+    bin_edges = np.linspace(0, 100, 101)
+    write_hists(hists, bin_edges, tmp_path / "test.txt")
+    for key in hists.keys():
+        assert (tmp_path / f"test_{key}.txt").exists()
+
+
+def test_write_hists_unknown_format(tmp_path):
+    hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
+    bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]
+    with pytest.raises(Exception):
+        write_hists(hists, bin_edges, tmp_path / "unknown.invalid")
+
+
+def test_write_hists_without_h5py(tmp_path):
+    hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
+    bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]
+    with hide_module("h5py"):
+        with pytest.raises(ModuleNotFoundError):
+            write_hists(hists, bin_edges, tmp_path / "test.hdf5")
+
+
+@pytest.mark.parametrize(
+    ("filename", "mimetype"),
+    [
+        ("test.root", "application/root"),
+        ("test.npz", "application/zip"),
+        ("test.txt", None),
+        pytest.param(
+            "test.hdf5",
+            "application/x-hdf5",
+            marks=pytest.mark.skipif(
+                find_spec("h5py") is None, reason="Module h5py not installed"
+            ),
+        ),
+    ],
+)
+def test_get_filetype(tmp_path, filename, mimetype):
+    hist = np.random.uniform(size=10)
+    bin_edges = np.linspace(0, 10, 11)
+    write_hist(tmp_path / filename, "test", hist, bin_edges)
+    assert (tmp_path / filename).exists()
+    assert get_filetype(tmp_path / filename) == mimetype
+
+
+def test_get_bin_edges_None():
+    hist = np.random.uniform(size=10)
+    res_hist, res_bin_edges = get_bin_edges(hist)
+    assert (res_hist == hist).all()
+    assert res_bin_edges is None
+
+
+def test_get_bin_edges_centers():
+    hist = np.random.uniform(size=10)
+    bin_edges = np.linspace(0, 10, 11)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) * 0.5
+    res_hist, res_bin_edges = get_bin_edges(np.array([bin_centers, hist]))
+    assert np.isclose(res_hist, hist).all()
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+
+def test_get_bin_edges_lo_hi():
+    hist = np.random.uniform(size=10)
+    bin_edges = np.linspace(0, 10, 11)
+    res_hist, res_bin_edges = get_bin_edges(
+        np.array([bin_edges[:-1], bin_edges[1:], hist])
+    )
+    assert np.isclose(res_hist, hist).all()
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+
+def test_get_bin_edges_T():
+    hist = np.random.uniform(size=10)
+    bin_edges = np.linspace(0, 10, 11)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) * 0.5
+    res_hist, res_bin_edges = get_bin_edges(np.array([bin_centers, hist]).T)
+    assert np.isclose(res_hist, hist).all()
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+
+def test_get_bin_edges_too_many():
+    hist = np.random.uniform(size=(10, 3, 3))
+    with pytest.raises(ValueError):
+        get_bin_edges(hist)
+
+
+def test_get_bin_edges_non_continuous():
+    hist = np.random.uniform(size=(10, 3))
+    with pytest.raises(ValueError):
+        get_bin_edges(hist)
 
 
 def test_get_obj_by_name_single():

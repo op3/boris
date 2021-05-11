@@ -90,8 +90,8 @@ def _bin_edges_dict(
 def write_hist(
     histfile: Path,
     name: str,
-    hist: np.array,
-    bin_edges: Union[np.array, List[np.ndarray], Tuple[np.array]],
+    hist: np.ndarray,
+    bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
 ) -> None:
     """Write single histogram to file"""
     if histfile.exists():
@@ -200,7 +200,7 @@ def get_filetype(path: Path) -> Optional[str]:
         return {
             b"PK\x03\x04": "application/zip",
             b"root": "application/root",
-            b"\xd3HDF": "application/x-hdf5",
+            b"\x89HDF": "application/x-hdf5",
         }.get(header, None)
 
 
@@ -223,7 +223,7 @@ def get_bin_edges(
     if hist.shape[0] < hist.shape[1]:
         hist = hist.T
     if hist.shape[1] >= 3:
-        if hist[:-1, 1] == hist[1:, 0].all():
+        if (hist[:-1, 1] == hist[1:, 0]).all():
             return hist[:, 2], np.concatenate([hist[:, 0], [hist[-1, 1]]])
         else:
             raise ValueError(
