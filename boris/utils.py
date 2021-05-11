@@ -105,15 +105,14 @@ def write_hist(
             },
         )
     elif histfile.suffix == ".txt":
-        if hist.ndim > 1:
+        if hist.ndim != 1:
             raise Exception(
                 f"Writing {hist.ndim}-dimensional histograms to txt not supported."
             )
-        # TODO: Store as (bin_edges_lower, bin_edges_upper, hist) instead
         np.savetxt(
             histfile,
-            hist,
-            header="bin edges:\n" + str(bin_edges) + f"\n{name}:",
+            np.array([bin_edges[:-1], bin_edges[1:], hist]).T,
+            header=f"bin_edges_lo, bin_edges_hi, {name}",
         )
     elif histfile.suffix == ".hdf5":
         try:
@@ -151,15 +150,16 @@ def write_hists(
 ) -> None:
     """Write multiple histograms to file."""
     if output_path.suffix == ".txt":
-        stem = output_path.stem
-        bins_lo = bin_edges[:-1]
-        bins_hi = bin_edges[1:]
-        for key, outspec in hists.items():
-            np.savetxt(
-                output_path.parents[0] / f"{stem}_{key}.txt",
-                np.array([bins_lo, bins_hi, outspec]).T,
-                header=f"bin_edges_low, bin_edges_high, {key}",
-            )
+        for hist in hists.values():
+            if hist.ndim != 1:
+                raise Exception(
+                    f"Writing {hist.ndim}-dimensional histograms to txt not supported."
+                )
+        np.savetxt(
+            output_path,
+            np.array([bin_edges[:-1], bin_edges[1:], *hists.values()]).T,
+            header=", ".join(["bin_edges_lo", "bin_edges_hi"] + list(hists.keys())),
+        )
     elif output_path.suffix == ".npz":
         hists.update(_bin_edges_dict(bin_edges))
         np.savez_compressed(output_path, **hists)
@@ -206,7 +206,7 @@ def get_filetype(path: Path) -> Optional[str]:
 
 def get_bin_edges(
     hist: np.ndarray,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+) -> Tuple[np.ndarray, List[np.ndarray]]:
     """Try to determine if hist contains binning information.
 
     Args:
@@ -217,14 +217,14 @@ def get_bin_edges(
         bin edges of histogram or None, if not available
     """
     if len(hist.shape) == 1:
-        return hist, None
-    if len(hist.shape) > 2:
+        return hist, []
+    if hist.ndim > 2:
         raise ValueError("Array contains too many dimensions (> 2).")
     if hist.shape[0] < hist.shape[1]:
         hist = hist.T
     if hist.shape[1] >= 3:
         if (hist[:-1, 1] == hist[1:, 0]).all():
-            return hist[:, 2], np.concatenate([hist[:, 0], [hist[-1, 1]]])
+            return hist[:, 2], [np.concatenate([hist[:, 0], [hist[-1, 1]]])]
         else:
             raise ValueError(
                 "Lower and upper bin edges (column 0 and 1) are not continuous."
@@ -233,13 +233,15 @@ def get_bin_edges(
         diff = np.diff(hist[:, 0]) / 2
         return (
             hist[:, 1],
-            np.concatenate(
-                [
-                    [hist[0, 0] - diff[0]],
-                    hist[1:, 0] - diff,
-                    [hist[-1, 0] + diff[-1]],
-                ]
-            ),
+            [
+                np.concatenate(
+                    [
+                        [hist[0, 0] - diff[0]],
+                        hist[1:, 0] - diff,
+                        [hist[-1, 0] + diff[-1]],
+                    ]
+                )
+            ],
         )
 
 
@@ -285,16 +287,16 @@ def get_keys_in_container(path: Path) -> List[str]:
         import uproot
 
         with uproot.open(path) as container:
-            return container.iterkeys(cycle=False)
+            return list(container.iterkeys(cycle=False))
     elif filetype == "application/zip":
         with np.load(path) as container:
-            return container.keys()
+            return list(container.keys())
     elif filetype == "application/x-hdf5":
         try:
             import h5py
 
             with h5py.File(path, "r") as container:
-                return container.keys()
+                return list(container.keys())
         except ModuleNotFoundError as err:
             logger.error("Please install h5py to read .hdf5 files")
             raise err
@@ -444,20 +446,50 @@ def hdi(
     return (sample[best], sample[best - interval])
 
 
+def reduce_binning(
+    bin_edges: np.ndarray,
+    binning_factor: int,
+    left: float = 0.0,
+    right: float = np.inf,
+) -> Tuple[int, int]:
+    """
+    Crop bin_edges to left and right and reduce the binning by binning_factor.
+    Both left and right are included in the resulting axis.
+
+    Args:
+        bin_edges: bin_edges array to work on
+        binning_factor: Determines, how many neighboring bins are joined
+        left: Crop bin_edges to the lowest bin still containing left.
+        right: Crop resulting bin_edges to the highest bin still containing right.
+
+    Returns:
+        index of original bin_edges which is lowest bin edge of resulting axis
+        index of original bin_edges which is highest bin edge of resulting axis
+    """
+    left_bin = np.argmax(left < bin_edges[1:])
+    right_bin = left_bin + (
+        np.argmax(right <= bin_edges[left_bin::binning_factor]) * binning_factor
+        or bin_edges.shape[0] - left_bin - 1
+    )
+    return left_bin, right_bin
+
+
 def rebin_hist(
     hist: np.ndarray,
-    bin_width: int,
-    left: Optional[int] = 0,
-    right: Optional[int] = None,
+    binning_factor: int,
+    bin_edges: Optional[np.ndarray] = None,
+    left: float = 0.0,
+    right: float = np.inf,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Rebin hist with dimension $N^M$.
 
     The binning is reduced by a factor of bin_width, i.e. neighboring
-    bins are summed. Bin edges are assumed to be at [0, 1, 2, …].
+    bins are summed.
 
     Args:
         hist: Input matrix of type $N^M$ (N bins, M dimensions)
-        bin_width: rebinning factor
+        binning_factor: rebinning factor, group this many bins together
+        bin_edges: Optional bin_edges array of hist, defaults to [0., 1., ...]
         left: lower edge of first bin of resulting matrix
         right: maximum upper edge of last bin of resulting matrix
 
@@ -465,24 +497,23 @@ def rebin_hist(
         rebinned matrix
         resulting bin edges
     """
-    left = left or 0
-    right = right or hist.shape[0] + 1
+    if bin_edges is None:
+        bin_edges = np.arange(0.0, hist.shape[0] + 1)
+    left_bin, right_bin = reduce_binning(bin_edges, binning_factor, left, right)
     num_dim = hist.ndim
-    num_bins = (right - left) // bin_width
-    upper = left + num_bins * bin_width
+    num_bins = (right_bin - left_bin) // binning_factor
 
     if not (np.array(hist.shape)[1:] == np.array(hist.shape)[:-1]).all():
         raise ValueError("Input histogram has to be square.")
 
     res = (
-        hist[(slice(left, upper),) * num_dim]
-        .reshape(*[num_bins, bin_width] * num_dim)
+        hist[(slice(left_bin, right_bin),) * num_dim]
+        .reshape(*[num_bins, binning_factor] * num_dim)
         .sum(axis=(num_dim * 2 - 1))
     )
     for i in range(1, num_dim):
         res = res.sum(axis=i)
-    bin_edges = np.linspace(left, upper, num_bins + 1)
-    return res, bin_edges
+    return res, bin_edges[left_bin : right_bin + 1 : binning_factor]
 
 
 def rebin_uniform(
@@ -546,7 +577,7 @@ def load_rema(
 
 def get_rema(
     path: Union[str, Path], bin_width: int, left: int, right: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Obtain the response matrix from the root file at path.
     root file has to contain "rema" and "n_simulated_particles" (TH1).
@@ -561,14 +592,17 @@ def get_rema(
 
     Returns:
         response matrix
-        number of simulated particles
         bin_edges
     """
     rema, bin_edges = load_rema(path, hist_rema, hist_norm)
-    if not (
-        np.isclose(np.diff(bin_edges[0]), 1.0).all()
-        and np.isclose(np.diff(bin_edges[0]), 1.0).all()
+    if (
+        not (2 >= len(bin_edges) > 0)
+        or len(rema.shape) != 2
+        or rema.shape[0] != rema.shape[1]
     ):
+        raise ValueError("Wrong response matrix dimension")
+    bin_edges = bin_edges[0]
+    if not np.isclose(np.diff(bin_edges), 1.0).all():
         raise NotImplementedError(
             "Response matrix with binning unequal to 1 keV not yet implemented."
         )
