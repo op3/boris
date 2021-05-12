@@ -36,6 +36,8 @@ from boris.utils import (
     hdi,
     load_rema,
     numpy_to_root_hist,
+    read_pos_int_spectrum,
+    read_rebin_spectrum,
     read_spectrum,
     rebin_hist,
     rebin_uniform,
@@ -63,9 +65,9 @@ def test__bin_edges_dict_2D():
     assert len(d) == 2
 
 
-pytest.mark.skipif(find_spec("uproot3") is None, reason="uproot3 not installed")
-
-
+@pytest.mark.skipif(
+    find_spec("uproot3") is None, reason="uproot3 not installed"
+)
 def test_numpy_to_root_hist_1D():
     import uproot3 as uproot
 
@@ -77,9 +79,9 @@ def test_numpy_to_root_hist_1D():
     assert res._fXaxis._fNbins == bin_edges.shape[0] - 1
 
 
-pytest.mark.skipif(find_spec("uproot3") is None, reason="uproot3 not installed")
-
-
+@pytest.mark.skipif(
+    find_spec("uproot3") is None, reason="uproot3 not installed"
+)
 def test_numpy_to_root_hist_2D():
     import uproot3 as uproot
 
@@ -92,9 +94,9 @@ def test_numpy_to_root_hist_2D():
     assert res._fYaxis._fNbins == bin_edges[1].shape[0] - 1
 
 
-pytest.mark.skipif(find_spec("uproot3") is None, reason="uproot3 not installed")
-
-
+@pytest.mark.skipif(
+    find_spec("uproot3") is None, reason="uproot3 not installed"
+)
 def test_numpy_to_root_hist_2D_trace():
     import uproot3 as uproot
 
@@ -152,14 +154,6 @@ def test_write_hist_unknown_format(tmp_path):
         write_hist(tmp_path / "unknown.invalid", "test", hist, bin_edges)
 
 
-def test_write_hist_without_h5py(tmp_path):
-    hist = np.random.uniform(size=(10, 10))
-    bin_edges = np.linspace(0, 10, 11)
-    with hide_module("h5py"):
-        with pytest.raises(ModuleNotFoundError):
-            write_hist(tmp_path / "test.hdf5", "test", hist, bin_edges)
-
-
 @pytest.mark.parametrize(
     "filename",
     [
@@ -215,14 +209,6 @@ def test_write_hists_txt_2D(tmp_path):
         write_hists(hists, bin_edges, tmp_path / "test.txt")
 
 
-def test_write_hists_without_h5py(tmp_path):
-    hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
-    bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]
-    with hide_module("h5py"):
-        with pytest.raises(ModuleNotFoundError):
-            write_hists(hists, bin_edges, tmp_path / "test.hdf5")
-
-
 @pytest.mark.parametrize(
     ("filename", "mimetype"),
     [
@@ -244,13 +230,6 @@ def test_get_filetype(tmp_path, filename, mimetype):
     write_hist(tmp_path / filename, "test", hist, bin_edges)
     assert (tmp_path / filename).exists()
     assert get_filetype(tmp_path / filename) == mimetype
-
-
-def test_get_bin_edges_None():
-    hist = np.random.uniform(size=10)
-    res_hist, res_bin_edges = get_bin_edges(hist)
-    assert (res_hist == hist).all()
-    assert len(res_bin_edges) == 0
 
 
 def test_get_bin_edges_centers():
@@ -281,10 +260,17 @@ def test_get_bin_edges_T():
     assert np.isclose(res_bin_edges, bin_edges).all()
 
 
-def test_get_bin_edges_too_many():
+def test_get_bin_edges_ndim():
     hist = np.random.uniform(size=(10, 3, 3))
     with pytest.raises(ValueError):
         get_bin_edges(hist)
+
+    hist = np.random.uniform(size=(10,))
+    with pytest.raises(ValueError):
+        get_bin_edges(hist)
+
+    with pytest.raises(ValueError):
+        get_bin_edges(np.array([2.0])[0])
 
 
 def test_get_bin_edges_non_continuous():
@@ -341,11 +327,6 @@ def test_get_obj_bin_edges_not_found():
         get_obj_bin_edges({"a": 3})
 
 
-@pytest.mark.skip
-def test_get_obj_bin_edges():
-    ...
-
-
 @pytest.mark.parametrize(
     "filename",
     [
@@ -371,31 +352,11 @@ def test_get_keys_in_container(tmp_path, filename):
         assert key in keys
 
 
-def test_get_keys_in_container_without_h5py(tmp_path):
-    hists = {f"hist{i}": np.random.uniform(size=100) for i in range(4)}
-    bin_edges = np.linspace(0, 100, 101)
-    write_hists(hists, bin_edges, tmp_path / "test.hdf5")
-    assert (tmp_path / "test.hdf5").exists()
-    with hide_module("h5py"):
-        with pytest.raises(ModuleNotFoundError):
-            get_keys_in_container(tmp_path / "test.hdf5")
-
-
 def test_get_keys_in_container_unsupported(tmp_path):
     np.savetxt(tmp_path / "test.npy", np.array([1, 2, 3]))
     assert (tmp_path / "test.npy").exists()
     res = get_keys_in_container(tmp_path / "test.npy")
     assert len(res) == 0
-
-
-@pytest.mark.skip
-def test_read_pos_int_spectrum():
-    ...
-
-
-@pytest.mark.skip
-def test_read_rebin_spectrum():
-    ...
 
 
 def test_hdi():
@@ -530,3 +491,160 @@ def test_rebin_hist_bin_edges_lr():
     rebin, rebin_edges = rebin_hist(hist, 4, bin_edges, 25.0, 270.0)
     assert rebin.shape == (7, 7)
     assert np.isclose(rebin_edges, np.linspace(20.0, 300.0, 8)).all()
+
+
+def test_read_spectrum_no_bin_edges_npz(tmp_path):
+    path = tmp_path / "test.npz"
+    hist = np.linspace(0.0, 10.0, 11)
+    np.savez_compressed(path, **{"test": hist})
+
+    res, bin_edges = read_spectrum(path, "test", False)
+    assert not bin_edges
+    assert np.isclose(res, hist).all()
+
+    with pytest.raises(ValueError):
+        read_spectrum(path, "test", True)
+
+
+@pytest.mark.skipif(
+    find_spec("h5py") is None, reason="Module h5py not installed"
+)
+def test_read_spectrum_no_bin_edges_hdf5(tmp_path):
+    import h5py
+
+    path = tmp_path / "test.hdf5"
+    hist = np.linspace(0.0, 10.0, 11)
+    with h5py.File(path, "w") as f:
+        f.create_dataset("test", data=hist)
+
+    res, bin_edges = read_spectrum(path, "test", False)
+    assert not bin_edges
+    assert np.isclose(res, hist).all()
+
+    with pytest.raises(ValueError):
+        read_spectrum(path, "test", True)
+
+
+def test_read_pos_int_spectrum(tmp_path):
+    bin_edges = np.linspace(0.0, 10.0, 11)
+
+    hist = np.linspace(1.0, 10.0, 10, dtype=float)
+    write_hist(tmp_path / "test_float.npz", "test", hist, bin_edges)
+    res_hist, (res_bin_edges,) = read_pos_int_spectrum(
+        tmp_path / "test_float.npz", "test"
+    )
+    assert np.isclose(res_bin_edges, bin_edges).all()
+    assert np.isclose(res_hist, hist).all()
+    assert issubclass(res_hist.dtype.type, np.integer)
+
+    hist = np.linspace(0.5, 17.0, 10, dtype=float)
+    write_hist(tmp_path / "test_nonint.npz", "test", hist, bin_edges)
+    with pytest.raises(ValueError):
+        read_pos_int_spectrum(tmp_path / "test_nonint.npz", "test")
+
+    hist = np.linspace(-10, -1.0, 10, dtype=float)
+    write_hist(tmp_path / "test_neg.npz", "test", hist, bin_edges)
+    with pytest.raises(ValueError):
+        read_pos_int_spectrum(tmp_path / "test_neg.npz", "test")
+
+
+def test_read_rebin_spectrum(tmp_path):
+    bin_edges = np.linspace(0.0, 10.0, 11)
+    hist = np.linspace(1.0, 10.0, 10, dtype=float)
+    path = tmp_path / "test.npz"
+    write_hist(path, "test", hist, bin_edges)
+
+    target_bin_edges = np.linspace(-2.0, 12.0, 8)
+    res_hist, (res_bin_edges,) = read_rebin_spectrum(
+        path, target_bin_edges, "test"
+    )
+    assert res_hist.sum() == hist.sum()
+    assert res_hist.shape[0] == target_bin_edges.shape[0] - 1
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+    read_rebin_spectrum(path, target_bin_edges, "test", [0.0, 1.0])
+
+    path1 = tmp_path / "test1.npz"
+    np.savez_compressed(path1, **{"test": hist})
+    res_hist, (res_bin_edges,) = read_rebin_spectrum(
+        path1, target_bin_edges, "test", cal_bin_edges=[0.0, 1.0]
+    )
+    assert res_hist.sum() == hist.sum()
+    assert res_hist.shape[0] == target_bin_edges.shape[0] - 1
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+    res_hist, (res_bin_edges,) = read_rebin_spectrum(
+        path1, target_bin_edges, "test", cal_bin_centers=[0.5, 1.0]
+    )
+    assert res_hist.sum() == hist.sum()
+    assert res_hist.shape[0] == target_bin_edges.shape[0] - 1
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+    path2 = tmp_path / "test.root"
+    write_hist(path2, "test", hist, bin_edges)
+    res_hist, (res_bin_edges,) = read_rebin_spectrum(
+        path2, target_bin_edges, "test", cal_bin_centers=[0.5, 1.0]
+    )
+    assert res_hist.sum() == hist.sum()
+    assert res_hist.shape[0] == target_bin_edges.shape[0] - 1
+    assert np.isclose(res_bin_edges, bin_edges).all()
+
+
+def test_read_rebin_spectrum_filter(tmp_path):
+    bin_edges = np.linspace(0.0, 10.0, 11)
+    hist = np.linspace(1.0, 10.0, 10, dtype=float)
+    path = tmp_path / "test.npz"
+    write_hist(path, "test", hist, bin_edges)
+
+    target_bin_edges = np.linspace(-2.0, 12.0, 8)
+    res_hist, _ = read_rebin_spectrum(
+        path, target_bin_edges, "test", filter_spectrum=lambda x: x * 2
+    )
+    assert res_hist.sum() == 2.0 * hist.sum()
+
+
+def test_get_rema(tmp_path):
+    rema = np.ones((10, 10))
+    hist_norm = 100 * np.ones(10)
+    bin_edges = np.linspace(0, 10, 11)
+    path = tmp_path / "rema.npz"
+    write_hists(
+        {"rema": rema, "n_simulated_particles": hist_norm},
+        [bin_edges, bin_edges],
+        path,
+    )
+
+    res_rema, res_bin_edges = get_rema(path, "rema", 2, 0, 10)
+    assert res_rema.shape == (5, 5)
+    assert np.isclose(res_rema.sum(), rema.sum())
+    assert res_bin_edges.shape == (6,)
+
+    res_rema, res_bin_edges = get_rema(
+        path, "rema", 2, 0, 10, "n_simulated_particles"
+    )
+    assert res_rema.shape == (5, 5)
+    assert np.isclose(100.0 * res_rema.sum(), rema.sum())
+    assert res_bin_edges.shape == (6,)
+
+    rema = np.ones((10, 20))
+    path1 = tmp_path / "rema1.npz"
+    write_hist(path1, "rema", rema, [bin_edges, bin_edges])
+    with pytest.raises(ValueError):
+        get_rema(path1, "rema", 2, 0, 10)
+
+
+def test_get_rema_unequal_binning(tmp_path):
+    import uproot3 as uproot
+    from uproot3_methods.classes import TH1, TH2
+
+    rema = TH2.from_numpy(
+        [np.ones((10, 10)), np.linspace(0, 10, 11), np.linspace(0, 10, 11)]
+    )
+    hist_norm = TH1.from_numpy([np.ones(20), np.linspace(0, 20, 21)])
+    path = tmp_path / "rema.root"
+    with uproot.recreate(path) as f:
+        f["rema"] = rema
+        f["n_simulated_particles"] = hist_norm
+
+    with pytest.raises(ValueError):
+        get_rema(path, "rema", 2, 0, 10, "n_simulated_particles")

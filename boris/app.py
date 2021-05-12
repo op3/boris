@@ -352,7 +352,7 @@ def sirob(
     with do_step(
         f"Reading incident spectrum {incident_spectrum}{print_histname}"
     ):
-        incident, spectrum_bin_edges = read_rebin_spectrum(
+        incident, (spectrum_bin_edges,) = read_rebin_spectrum(
             incident_spectrum,
             rema_bin_edges,
             histname,

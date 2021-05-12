@@ -19,6 +19,7 @@
 
 """Utils for input and output preparation."""
 
+import importlib
 import logging
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from pathlib import Path
@@ -115,23 +116,19 @@ def write_hist(
             header=f"bin_edges_lo, bin_edges_hi, {name}",
         )
     elif histfile.suffix == ".hdf5":
-        try:
-            import h5py
+        import h5py
 
-            with h5py.File(histfile, "w") as f:
+        with h5py.File(histfile, "w") as f:
+            f.create_dataset(
+                name, data=hist, compression="gzip", compression_opts=9
+            )
+            for key, arr in _bin_edges_dict(bin_edges).items():
                 f.create_dataset(
-                    name, data=hist, compression="gzip", compression_opts=9
+                    key,
+                    data=arr,
+                    compression="gzip",
+                    compression_opts=9,
                 )
-                for key, arr in _bin_edges_dict(bin_edges).items():
-                    f.create_dataset(
-                        key,
-                        data=arr,
-                        compression="gzip",
-                        compression_opts=9,
-                    )
-        except ModuleNotFoundError as err:
-            logger.error("Please install h5py to write hdf5 files")
-            raise err
     elif histfile.suffix == ".root":
         import uproot3 as uproot
 
@@ -176,21 +173,17 @@ def write_hists(
             for key, outspec in hists.items():
                 f[key] = numpy_to_root_hist(outspec, bin_edges)
     elif output_path.suffix == ".hdf5":
-        try:
-            import h5py
+        import h5py
 
-            with h5py.File(output_path, "w") as f:
-                hists.update(_bin_edges_dict(bin_edges))
-                for key, outspec in hists.items():
-                    f.create_dataset(
-                        key,
-                        data=outspec,
-                        compression="gzip",
-                        compression_opts=9,
-                    )
-        except ModuleNotFoundError as err:
-            logger.error("Please install h5py to write hdf5 files")
-            raise err
+        with h5py.File(output_path, "w") as f:
+            hists.update(_bin_edges_dict(bin_edges))
+            for key, outspec in hists.items():
+                f.create_dataset(
+                    key,
+                    data=outspec,
+                    compression="gzip",
+                    compression_opts=9,
+                )
     else:
         raise Exception(f"File format {output_path.suffix} not supported.")
 
@@ -218,10 +211,10 @@ def get_bin_edges(
         Extracted histogram
         bin edges of histogram or None, if not available
     """
-    if len(hist.shape) == 1:
-        return hist, []
-    if hist.ndim > 2:
-        raise ValueError("Array contains too many dimensions (> 2).")
+    if hist.ndim != 2 or hist.shape[1] < 2:
+        raise ValueError(
+            "Array is wrong dimension (≠ 2), cannot extract bin edges."
+        )
     if hist.shape[0] < hist.shape[1]:
         hist = hist.T
     if hist.shape[1] >= 3:
@@ -294,28 +287,24 @@ def get_keys_in_container(path: Path) -> List[str]:
         with np.load(path) as container:
             return list(container.keys())
     elif filetype == "application/x-hdf5":
-        try:
-            import h5py
+        import h5py
 
-            with h5py.File(path, "r") as container:
-                return list(container.keys())
-        except ModuleNotFoundError as err:
-            logger.error("Please install h5py to read .hdf5 files")
-            raise err
+        with h5py.File(path, "r") as container:
+            return list(container.keys())
     return []
 
 
 def read_spectrum(
     spectrum: Path,
     histname: Optional[str] = None,
-    bin_edges: bool = True,
+    extract_bin_edges: bool = True,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
     """Read spectrum to numpy array.
 
     Args:
         spectrum: Path of spectrum file
         histname: Name of histogram in spectrum file to load (optional)
-        bin_edges: Determine bin edges of spectrum
+        extract_bin_edges: Determine bin edges of spectrum
 
     Returns:
         Extracted histogram
@@ -333,38 +322,38 @@ def read_spectrum(
     elif filetype == "application/zip":
         with np.load(spectrum) as specfile:
             hist = get_obj_by_name(specfile, histname)
-            if bin_edges:
+            if extract_bin_edges:
                 try:
                     return (hist, get_obj_bin_edges(specfile))
                 except KeyError:
                     pass
     elif filetype == "application/x-hdf5":
-        try:
-            import h5py
+        import h5py
 
-            with h5py.File(spectrum, "r") as specfile:
-                hist = get_obj_by_name(specfile, histname)[()]
-                if bin_edges:
-                    try:
-                        return (
-                            hist,
-                            [a[()] for a in get_obj_bin_edges(specfile)],
-                        )
-                    except KeyError:
-                        pass
-        except ModuleNotFoundError as err:
-            logger.error("Please install h5py to read .hdf5 files")
-            raise err
+        with h5py.File(spectrum, "r") as specfile:
+            hist = get_obj_by_name(specfile, histname)[()]
+            if extract_bin_edges:
+                try:
+                    return (
+                        hist,
+                        [a[()] for a in get_obj_bin_edges(specfile)],
+                    )
+                except KeyError:
+                    pass
     else:
         hist = np.loadtxt(spectrum)
-    if bin_edges:
+    if extract_bin_edges:
         return get_bin_edges(hist)
     return hist, []
 
 
 def read_pos_int_spectrum(
-    spectrum: Path, histname: Optional[str] = None, tol: float = 0.001
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    path: Path,
+    histname: Optional[str] = None,
+    extract_bin_edges: bool = True,
+    rtol: float = 1e-05,
+    atol: float = 1e-08,
+) -> Tuple[np.ndarray, List[np.ndarray]]:
     """
     Read spectrum to numpy array of type np.integer. The spectrum must
     contain no negative bins.
@@ -372,21 +361,26 @@ def read_pos_int_spectrum(
     Args:
         spectrum: Path of spectrum file
         histname: Name of histogram in spectrum file to load (optional)
-        tol: Maximum sum area difference for integer conversion (optional)
+        extract_bin_edges: Determine bin edges of spectrum
+        rtol: The relative tolerance parameter (optional, passed to numpy.isclose)
+        atol: The absolute tolerance parameter (optional, passed to numpy.isclose)
 
     Returns:
         Extracted histogram
         Bin edges of spectrum or None, if not available
     """
-    spectrum, spectrum_bin_edges = read_spectrum(spectrum, histname)
+    spectrum, spectrum_bin_edges = read_spectrum(
+        path, histname, extract_bin_edges
+    )
     if not issubclass(spectrum.dtype.type, np.integer):
         logger.warning("Histogram is not of type integer, converting ...")
-        sum_before = np.sum(spectrum)
+        spectrum_before = spectrum
         spectrum = spectrum.astype(np.int64)
-        sum_diff = np.sum(spectrum) - sum_before
-        if sum_diff > tol:
+        if not np.isclose(
+            spectrum_before, spectrum, rtol=rtol, atol=atol
+        ).all():
             raise ValueError(
-                "Histogram area changed by more than {sum_diff:e}."
+                "Lost precision during conversion to integer histogram."
             )
     if (spectrum < 0).any():
         raise ValueError(
@@ -396,13 +390,13 @@ def read_pos_int_spectrum(
 
 
 def read_rebin_spectrum(
-    spectrum: Path,
+    path: Path,
     bin_edges_rebin: np.ndarray,
     histname: Optional[str] = None,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     filter_spectrum: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, List[np.ndarray]]:
     """Read and rebin spectrum.
 
     Args:
@@ -416,17 +410,22 @@ def read_rebin_spectrum(
         Histogram
         Bin edges
     """
-    spectrum, spectrum_bin_edges = read_pos_int_spectrum(spectrum, histname)
-    if spectrum_bin_edges is not None and (cal_bin_centers or cal_bin_edges):
-        logger.warning("Ignoring calibration, binnig already provided")
-    if cal_bin_centers is not None:
-        spectrum_bin_edges = np.poly1d(np.array(cal_bin_centers)[::-1])(
-            np.arange(spectrum.size + 1) - 0.5
+    if cal_bin_centers or cal_bin_edges:
+        spectrum, included_bin_edges = read_pos_int_spectrum(
+            path, histname, extract_bin_edges=False
         )
-    elif cal_bin_edges is not None:
-        spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
-            np.arange(spectrum.size + 1)
-        )
+        if included_bin_edges:
+            logger.warning("Ignoring binning information of spectrum")
+        if cal_bin_centers:
+            spectrum_bin_edges = np.poly1d(np.array(cal_bin_centers)[::-1])(
+                np.arange(spectrum.size + 1) - 0.5
+            )
+        else:
+            spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
+                np.arange(spectrum.size + 1)
+            )
+    else:
+        spectrum, (spectrum_bin_edges,) = read_pos_int_spectrum(path, histname)
 
     if filter_spectrum is not None:
         spectrum = filter_spectrum(spectrum)
@@ -434,7 +433,7 @@ def read_rebin_spectrum(
     if spectrum_bin_edges is not None:
         spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
 
-    return spectrum, spectrum_bin_edges
+    return spectrum, [spectrum_bin_edges]
 
 
 def hdi(
@@ -568,16 +567,24 @@ def load_rema(
         response matrix
         List of bin_edges arrays
     """
-    rema, (bin_edges,) = read_spectrum(path, hist_rema)
+    rema, bin_edges = read_spectrum(path, hist_rema)
+    if (
+        not (2 >= len(bin_edges) > 0)
+        or len(rema.shape) != 2
+        or rema.shape[0] != rema.shape[1]
+    ):
+        raise ValueError("Wrong response matrix dimension")
     if hist_norm:
-        norm, (norm_bin_edges,) = read_spectrum(path, hist_norm)
-        # TODO: Is this the correct axis of rema?
-        if not (bin_edges == norm_bin_edges).all():
-            raise Exception(
+        norm, (norm_bin_edges, *_) = read_spectrum(path, hist_norm)
+        if not (
+            bin_edges[0].shape == norm_bin_edges.shape
+            and np.isclose(bin_edges[0], norm_bin_edges).all()
+        ):
+            raise ValueError(
                 "Binning of response matrix and normalization histogram not equal"
             )
         rema /= norm
-    return rema, [bin_edges]
+    return rema, bin_edges
 
 
 def get_rema(
@@ -608,18 +615,7 @@ def get_rema(
         bin_edges
     """
     rema, bin_edges = load_rema(path, hist_rema, hist_norm)
-    if (
-        not (2 >= len(bin_edges) > 0)
-        or len(rema.shape) != 2
-        or rema.shape[0] != rema.shape[1]
-    ):
-        raise ValueError("Wrong response matrix dimension")
     bin_edges = bin_edges[0]
-    if not np.isclose(np.diff(bin_edges), 1.0).all():
-        raise NotImplementedError(
-            "Response matrix with binning unequal to 1 keV not yet implemented."
-        )
 
-    # TODO:
     rema_re = rebin_hist(rema, binning_factor, bin_edges, left, right)
     return rema_re
