@@ -326,7 +326,10 @@ def read_spectrum(
         import uproot
 
         with uproot.open(spectrum) as specfile:
-            return get_obj_by_name(specfile, histname).to_numpy()
+            hist, *res_bin_edges = get_obj_by_name(
+                specfile, histname
+            ).to_numpy()
+            return hist, res_bin_edges
     elif filetype == "application/zip":
         with np.load(spectrum) as specfile:
             hist = get_obj_by_name(specfile, histname)
@@ -356,7 +359,7 @@ def read_spectrum(
         hist = np.loadtxt(spectrum)
     if bin_edges:
         return get_bin_edges(hist)
-    return hist
+    return hist, []
 
 
 def read_pos_int_spectrum(

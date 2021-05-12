@@ -126,7 +126,7 @@ def test_write_hist(tmp_path, filename):
     bin_edges = np.linspace(0, 100, 101)
     write_hist(tmp_path / filename, "testhist", hist, bin_edges)
     assert (tmp_path / filename).exists()
-    res_hist, (res_bin_edges) = read_spectrum(tmp_path / filename, "testhist")
+    res_hist, (res_bin_edges,) = read_spectrum(tmp_path / filename, "testhist")
     assert np.isclose(hist, res_hist).all()
     assert np.isclose(bin_edges, res_bin_edges).all()
 
@@ -386,11 +386,6 @@ def test_get_keys_in_container_unsupported(tmp_path):
     assert (tmp_path / "test.npy").exists()
     res = get_keys_in_container(tmp_path / "test.npy")
     assert len(res) == 0
-
-
-@pytest.mark.skip
-def test_read_spectrum():
-    ...
 
 
 @pytest.mark.skip

@@ -26,7 +26,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 if __name__ == "__main__":
     project_dir = Path(__file__).absolute().parents[1].resolve()
@@ -53,6 +53,9 @@ class SimInfo:
         """Create SimInfo object from dat_file line"""
         path, energy, nevents = line.split(" ")
         return cls(sim_root / path.rstrip(":"), float(energy), int(nevents))
+
+    def to_dat_file_line(self):
+        return f"{self.path}: {self.energy} {self.nevents}"
 
 
 def read_dat_file(
@@ -82,7 +85,7 @@ class SimSpec(SimInfo):
     ):
         super().__init__(path, energy, nevents)
         self.detector = detector
-        self.orig_spec, self.bin_edges = read_spectrum(self.path, detector)
+        self.orig_spec, (self.bin_edges,) = read_spectrum(self.path, detector)
         self.bin_edges *= scale
         self.bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
         if normalize:
@@ -122,8 +125,12 @@ def interpolate_grid(grid: np.ndarray, point: float):
 
 
 def create_matrix(
-    simulations, detector, max_energy=None, scale=1e3, normalize=True
-):
+    simulations: List[SimInfo],
+    detector: str,
+    max_energy: float = None,
+    scale: float = 1e3,
+    normalize: bool = True,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     specs = {
         sim.energy: SimSpec(
             sim.path, detector, sim.energy, sim.nevents, scale, normalize
@@ -131,13 +138,13 @@ def create_matrix(
         for sim in simulations
     }
 
-    energies = sorted(list(specs.keys()))
+    energies = np.array(sorted(list(specs.keys())))
     bin_edges = specs[energies[-1]].bin_edges
     max_energy = max_energy or energies[-1]
     max_idx = np.argmin(bin_edges < max_energy)
     bin_edges = bin_edges[: max_idx + 1]
     bin_width = bin_edges[-1] - bin_edges[-2]
-    rel_peak_pos = specs[max_energy].binning_convention()
+    rel_peak_pos = next(iter(specs.values())).binning_convention()
 
     # TODO: Maybe some indices are wrong here?
     mat = np.zeros(
@@ -168,14 +175,11 @@ def make_matrix(
     max_energy: Optional[float] = None,
     scale_hist_axis: float = 1e3,
     sim_dir: Optional[Path] = None,
-    normalize: bool = True,
-):
+) -> None:
     simulations = read_dat_file(dat_path, sim_dir)
     dets = dets or get_keys_in_container(simulations[0].path)
     remas = {
-        det: create_matrix(
-            simulations, det, max_energy, scale_hist_axis, normalize
-        )
+        det: create_matrix(simulations, det, max_energy, scale_hist_axis)
         for det in dets or [None]
     }
     idx = next(iter(remas))
@@ -212,13 +216,6 @@ def parse_args(args: List[str]):
         type=float,
     )
     parser.add_argument(
-        "--no-normalize",
-        help="Don’t normalize response matrix, create histogram 'n_simulated'particles'",
-        action="store_true",
-        default=False,
-        type=bool,
-    )
-    parser.add_argument(
         "datfile",
         help=(
             "datfile containing simulation information, each line has format "
@@ -234,7 +231,7 @@ def parse_args(args: List[str]):
     return parser.parse_args(args)
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args(sys.argv[1:])
     make_matrix(
         args.datfile,
@@ -243,5 +240,8 @@ if __name__ == "__main__":
         args.max_energy,
         args.scale_hist_axis,
         args.sim_dir,
-        args.no_normalize,
     )
+
+
+if __name__ == "__main__":
+    main()

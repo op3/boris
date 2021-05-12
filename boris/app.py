@@ -538,21 +538,6 @@ def boris2spec(
         get_hdi: Generate spectra containing highest density interval of each bin
         hdi_prob: Probability for which the highest density interval will be computed
     """
-    if not plot and output_path is None:
-        logger.error("Please specify output_path or use --plot option")
-        exit()
-
-    if not (
-        get_mean
-        or get_median
-        # or get_mode
-        or get_variance
-        or get_std_dev
-        or get_hdi
-    ):
-        logger.error("Nothing to do, please give some --get-* options")
-        exit()
-
     spec, bin_edges = read_spectrum(incident_spectrum, "incident")
     bin_edges = bin_edges[-1]
 
@@ -688,6 +673,18 @@ class Boris2SpecApp:
             nargs="?",
         )
         self.args = parser.parse_args(args)
+        if not self.args.plot and self.args.output_path is None:
+            parser.error("Please specify output_path and/or use --plot option")
+
+        if not (
+            self.args.get_mean
+            or self.args.get_median
+            # or self.args.get_mode
+            or self.args.get_variance
+            or self.args.get_std_dev
+            or self.args.get_hdi
+        ):
+            parser.error("Nothing to do, please give some --get-* options")
 
 
 if __name__ == "__main__":
