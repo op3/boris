@@ -78,7 +78,7 @@ def boris(
     matrix: Path,
     observed_spectrum: Path,
     incident_spectrum: Path,
-    bin_width: int,
+    binning_factor: int,
     left: int,
     right: int,
     ndraws: int,
@@ -87,11 +87,13 @@ def boris(
     burn: int,
     cores: int,
     histname: Optional[str] = None,
+    rema_name: str = "rema",
     background_spectrum: Optional[Path] = None,
     background_name: Optional[str] = None,
     background_scale: float = 1.0,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
+    norm_hist: Optional[str] = None,
 ) -> None:
     """Load response matrix and spectrum, sample MCMC chain,
     write resulting trace to file.
@@ -103,11 +105,10 @@ def boris(
         histname: name of histogram in observed_spectrum to read (optional)
     """
 
-    with do_step(f"Reading response matrix {matrix}"):
-        rema_counts, rema_nsim, rema_bin_edges = get_rema(
-            matrix, bin_width, left, right
+    with do_step(f"Reading response matrix {rema_name} from {matrix}"):
+        rema, rema_bin_edges = get_rema(
+            matrix, rema_name, binning_factor, left, right, norm_hist
         )
-        rema = rema_counts / rema_nsim
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -176,7 +177,7 @@ class BorisApp:
             self.args.matrix,
             self.args.observed_spectrum,
             self.args.incident_spectrum,
-            self.args.bin_width,
+            self.args.binning_factor,
             self.args.left,
             self.args.right,
             self.args.ndraws,
@@ -213,8 +214,8 @@ class BorisApp:
         )
         parser.add_argument(
             "-b",
-            "--bin-width",
-            help="bin width of deconvoluted spectrum",
+            "--binning-factor",
+            help="rebinning factor, group this many bins together",
             type=int,
             default=10,
         )
@@ -292,10 +293,24 @@ class BorisApp:
             type=float,
             nargs="+",
         )
+        parser.add_argument(
+            "--rema-name",
+            help="Name of the detector response matrix in matrix file",
+            default="rema",
+            nargs=1,
+            type=str,
+        )
+        parser.add_argument(
+            "--norm-hist",
+            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
+            nargs="?",
+            default=None,
+            type=str,
+        )
 
         parser.add_argument(
-            "matrix",
-            help="response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms",
+            "matrixfile",
+            help="container file containing detector response matrix",
             type=Path,
         )
         parser.add_argument(
@@ -316,21 +331,22 @@ def sirob(
     matrix: Path,
     incident_spectrum: Path,
     observed_spectrum: Path,
-    bin_width: int,
+    binning_factor: int,
     left: int,
     right: int,
     histname: Optional[str] = None,
+    rema_name: str = "rema",
     background_spectrum: Optional[Path] = None,
     background_name: Optional[str] = None,
     background_scale: float = 1.0,
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
+    norm_hist: Optional[str] = None,
 ) -> None:
-    with do_step(f"Reading response matrix from {matrix}"):
-        rema_counts, rema_nsim, rema_bin_edges = get_rema(
-            matrix, bin_width, left, right
+    with do_step(f"Reading response matrix {rema_name} from {matrix}"):
+        rema, rema_bin_edges = get_rema(
+            matrix, rema_name, binning_factor, left, right, norm_hist
         )
-        rema = rema_counts / rema_nsim
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -368,10 +384,9 @@ def sirob(
                 )
 
     with do_step("Calculating observed (convoluted) spectrum"):
-        if background is None:
-            observed = incident @ rema
-        else:
-            observed = incident @ rema + background_scale * background
+        observed = incident @ rema
+        if background:
+            observed += background_scale * background
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
         write_hist(observed_spectrum, "observed", observed, spectrum_bin_edges)
@@ -382,10 +397,11 @@ class SirobApp:
         """CLI interface for sirob."""
         self.parse_args(sys.argv[1:])
         sirob(
-            self.args.matrix,
+            self.args.matrixfile,
+            self.args.rema_name,
             self.args.incident_spectrum,
             self.args.observed_spectrum,
-            self.args.bin_width,
+            self.args.binning_factor,
             self.args.left,
             self.args.right,
             self.args.hist,
@@ -394,6 +410,7 @@ class SirobApp:
             self.args.bg_scale,
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
+            self.args.norm_hist,
         )
 
     def parse_args(self, args: List[str]):
@@ -417,8 +434,8 @@ class SirobApp:
         )
         parser.add_argument(
             "-b",
-            "--bin-width",
-            help="bin width of deconvoluted spectrum",
+            "--binning-facor",
+            help="rebinning factor, group this many bins together",
             type=int,
             default=10,
         )
@@ -463,10 +480,24 @@ class SirobApp:
             type=float,
             nargs="+",
         )
+        parser.add_argument(
+            "--rema-name",
+            help="Name of the detector response matrix in matrix file",
+            default="rema",
+            nargs=1,
+            type=str,
+        )
+        parser.add_argument(
+            "--norm-hist",
+            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
+            nargs="?",
+            default=None,
+            type=str,
+        )
 
         parser.add_argument(
-            "matrix",
-            help="response matrix in root format, containing 'rema' and 'n_simulated_particles' histograms",
+            "matrixfile",
+            help="container file containing detector response matrix",
             type=Path,
         )
         parser.add_argument(
@@ -522,19 +553,8 @@ def boris2spec(
         logger.error("Nothing to do, please give some --get-* options")
         exit()
 
-    if incident_spectrum.suffix == ".root":
-        spec, bins = read_spectrum(incident_spectrum, "incident")
-        (
-            _,
-            bin_edges,
-        ) = bins[0]
-    elif incident_spectrum.suffix in [".hdf5", ".npz"]:
-        spec = read_spectrum(incident_spectrum, "incident", False)
-        bin_edges = read_spectrum(incident_spectrum, "bin_edges", False)
-    else:
-        raise Exception(
-            f"{sys.argv[0]} only supports .root, .npz and .hdf5 files"
-        )
+    spec, bin_edges = read_spectrum(incident_spectrum, "incident")
+    bin_edges = bin_edges[-1]
 
     res = {}
 

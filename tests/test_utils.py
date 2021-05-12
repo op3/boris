@@ -207,11 +207,13 @@ def test_write_hists_unknown_format(tmp_path):
     with pytest.raises(Exception):
         write_hists(hists, bin_edges, tmp_path / "unknown.invalid")
 
+
 def test_write_hists_txt_2D(tmp_path):
     hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
     bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]
     with pytest.raises(Exception):
         write_hists(hists, bin_edges, tmp_path / "test.txt")
+
 
 def test_write_hists_without_h5py(tmp_path):
     hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}

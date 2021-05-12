@@ -158,7 +158,9 @@ def write_hists(
         np.savetxt(
             output_path,
             np.array([bin_edges[:-1], bin_edges[1:], *hists.values()]).T,
-            header=", ".join(["bin_edges_lo", "bin_edges_hi"] + list(hists.keys())),
+            header=", ".join(
+                ["bin_edges_lo", "bin_edges_hi"] + list(hists.keys())
+            ),
         )
     elif output_path.suffix == ".npz":
         hists.update(_bin_edges_dict(bin_edges))
@@ -478,7 +480,7 @@ def rebin_hist(
     hist: np.ndarray,
     binning_factor: int,
     bin_edges: Optional[np.ndarray] = None,
-    left: float = 0.0,
+    left: float = -np.inf,
     right: float = np.inf,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Rebin hist with dimension $N^M$.
@@ -548,7 +550,7 @@ def rebin_uniform(
 def load_rema(
     path: Path,
     hist_rema: str,
-    hist_norm: Optional[str],
+    hist_norm: Optional[str] = None,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
     """
     Load detector response matrix from file.
@@ -563,32 +565,40 @@ def load_rema(
         response matrix
         List of bin_edges arrays
     """
-    rema = read_spectrum(path, hist_rema)
+    rema, (bin_edges,) = read_spectrum(path, hist_rema)
     if hist_norm:
-        norm = read_spectrum(path, hist_norm)
+        norm, (norm_bin_edges,) = read_spectrum(path, hist_norm)
         # TODO: Is this the correct axis of rema?
-        if not (rema[1][0] == norm[1][0]).all():
+        if not (bin_edges == norm_bin_edges).all():
             raise Exception(
                 "Binning of response matrix and normalization histogram not equal"
             )
-        rema /= norm[0]
-    return rema
+        rema /= norm
+    return rema, [bin_edges]
 
 
 def get_rema(
-    path: Union[str, Path], bin_width: int, left: int, right: int
+    path: Path,
+    hist_rema: str,
+    binning_factor: int,
+    left: int,
+    right: int,
+    hist_norm: Optional[str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Obtain the response matrix from the root file at path.
-    root file has to contain "rema" and "n_simulated_particles" (TH1).
+    Obtain the response matrix (name given by hist_rema) from the container
+    file at path. Optionally normalize using histogram given by hist_norm.
     The response matrix is cropped to left and right and rebinned to
-    bin_width.
+    binning_factor.
 
     Args:
-        path: path of root file
-        bin_width: rebin matrix to this width
+        path: path of container file
+        hist_rema: Name of detector respone matrix histogram,
+        binning_factor: rebinning factor, group this many bins together
         left: lower boundary of cropped matrix
         right: maximum upper boundary of cropped matrix.
+        hist_norm: Divide detector response matrix by this histogram, e. g.
+            to scale the matrix by the number of simulated particles
 
     Returns:
         response matrix
@@ -608,5 +618,5 @@ def get_rema(
         )
 
     # TODO:
-    rema_re = rebin_hist(rema, bin_width, left, right)
+    rema_re = rebin_hist(rema, binning_factor, bin_edges, left, right)
     return rema_re
