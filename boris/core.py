@@ -31,7 +31,6 @@ def deconvolute(
     background: Optional[np.ndarray] = None,
     background_scale: float = 1.0,
     ndraws: int = 10000,
-    tune: int = 500,
     thin: int = 1,
     burn: int = 1000,
     **kwargs,
@@ -97,5 +96,7 @@ def deconvolute(
         start = {"incident": incident_start}
         if background is not None:
             start["background"] = background_start
-        trace = pm.sample(ndraws, step=step, start=start, **kwargs)
+        trace = pm.sample(
+            ndraws, step=step, start=start, return_inferencedata=False, **kwargs
+        )
     return trace[burn::thin]

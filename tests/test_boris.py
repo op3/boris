@@ -20,3 +20,13 @@
 import pytest
 
 import numpy as np
+
+from boris.core import deconvolute
+
+
+def test_deconvolute_mismatch():
+    rema = np.random.uniform((10, 10))
+    spectrum = np.random.poisson(1000, size=10)
+    background = np.random.poisson(1000, size=12)
+    with pytest.raises(ValueError):
+        deconvolute(rema, spectrum.T, background.T)

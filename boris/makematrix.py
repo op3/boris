@@ -28,13 +28,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-if __name__ == "__main__":
-    project_dir = Path(__file__).absolute().parents[1].resolve()
-    project_path = str((project_dir / "boris").resolve())
-    if project_path in sys.path:
-        sys.path.remove(project_path)
-    sys.path.insert(0, str(project_dir))
-
 import numpy as np
 
 from boris.utils import read_spectrum, get_keys_in_container, write_hists
@@ -243,5 +236,9 @@ def main():
     )
 
 
-if __name__ == "__main__":
-    main()
+def init():
+    if __name__ == "__main__":
+        main()
+
+
+init()

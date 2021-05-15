@@ -25,16 +25,9 @@ import contextlib
 import logging
 import sys
 from pathlib import Path
-from typing import Generator, List, Optional
+from typing import Generator, List, Optional, Callable, Mapping
 
 import numpy as np
-
-if __name__ == "__main__":
-    project_dir = Path(__file__).absolute().parents[1].resolve()
-    project_path = str((project_dir / "boris").resolve())
-    if project_path in sys.path:
-        sys.path.remove(project_path)
-    sys.path.insert(0, str(project_dir))
 
 from boris.core import deconvolute
 from boris.utils import (
@@ -94,6 +87,7 @@ def boris(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
+    deconvolute: Callable[..., Mapping] = deconvolute,
 ) -> None:
     """Load response matrix and spectrum, sample MCMC chain,
     write resulting trace to file.
@@ -128,22 +122,13 @@ def boris(
         with do_step(
             f"Reading background spectrum {background_spectrum or observed_spectrum}{print_bgname}"
         ):
-            if background_spectrum is not None:
-                background, _ = read_rebin_spectrum(
-                    background_spectrum,
-                    rema_bin_edges,
-                    background_name,
-                    cal_bin_centers,
-                    cal_bin_edges,
-                )
-            else:
-                background, _ = read_rebin_spectrum(
-                    observed_spectrum,
-                    rema_bin_edges,
-                    background_name,
-                    cal_bin_centers,
-                    cal_bin_edges,
-                )
+            background, _ = read_rebin_spectrum(
+                background_spectrum or observed_spectrum,
+                rema_bin_edges,
+                background_name,
+                cal_bin_centers,
+                cal_bin_edges,
+            )
 
     with do_step("🎲 Sampling from posterior distribution"):
         trace = deconvolute(
@@ -174,7 +159,7 @@ class BorisApp:
             ):
                 np.random.seed(int(self.args.seed))
         boris(
-            self.args.matrix,
+            self.args.matrixfile,
             self.args.observed_spectrum,
             self.args.incident_spectrum,
             self.args.binning_factor,
@@ -186,11 +171,13 @@ class BorisApp:
             self.args.burn,
             self.args.cores,
             self.args.hist,
+            self.args.rema_name,
             self.args.bg_spectrum,
             self.args.bg_hist,
             self.args.bg_scale,
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
+            self.args.norm_hist,
         )
 
     def parse_args(self, args: List[str]):
@@ -366,26 +353,17 @@ def sirob(
         with do_step(
             f"Reading background spectrum {background_spectrum or observed_spectrum}{print_bgname}"
         ):
-            if background_spectrum is not None:
-                background, _ = read_rebin_spectrum(
-                    background_spectrum,
-                    rema_bin_edges,
-                    background_name,
-                    cal_bin_centers,
-                    cal_bin_edges,
-                )
-            else:
-                background, _ = read_rebin_spectrum(
-                    observed_spectrum,
-                    rema_bin_edges,
-                    background_name,
-                    cal_bin_centers,
-                    cal_bin_edges,
-                )
+            background, _ = read_rebin_spectrum(
+                background_spectrum or incident_spectrum,
+                rema_bin_edges,
+                background_name,
+                cal_bin_centers,
+                cal_bin_edges,
+            )
 
     with do_step("Calculating observed (convoluted) spectrum"):
         observed = incident @ rema
-        if background:
+        if background is not None:
             observed += background_scale * background
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
@@ -434,7 +412,7 @@ class SirobApp:
         )
         parser.add_argument(
             "-b",
-            "--binning-facor",
+            "--binning-factor",
             help="rebinning factor, group this many bins together",
             type=int,
             default=10,
@@ -687,11 +665,15 @@ class Boris2SpecApp:
             parser.error("Nothing to do, please give some --get-* options")
 
 
-if __name__ == "__main__":
-    setup_logging()
-    if Path(sys.argv[0]).stem == "sirob":
-        SirobApp()
-    elif Path(sys.argv[0]).stem == "boris2spec":
-        Boris2SpecApp()
-    if Path(sys.argv[0]).stem == "boris":
-        BorisApp()
+def init():
+    if __name__ == "__main__":
+        setup_logging()
+        if Path(sys.argv[0]).stem == "sirob":
+            SirobApp()
+        elif Path(sys.argv[0]).stem == "boris2spec":
+            Boris2SpecApp()
+        if Path(sys.argv[0]).stem == "boris":
+            BorisApp()
+
+
+init()

@@ -22,9 +22,11 @@ import pytest
 import sys
 from pathlib import Path
 from importlib.util import find_spec
+from unittest import mock
 
 import numpy as np
 
+import boris.makematrix
 from boris.utils import write_hist, write_hists, read_spectrum
 from boris.makematrix import (
     SimInfo,
@@ -34,6 +36,7 @@ from boris.makematrix import (
     create_matrix,
     make_matrix,
     main,
+    init,
 )
 
 
@@ -216,3 +219,10 @@ def test_makematrix_call(tmp_path):
         str(tmp_path / "test.root"),
     ]
     main()
+
+
+@mock.patch.object(boris.makematrix, "main")
+@mock.patch.object(boris.makematrix, "__name__", "__main__")
+def test_makematrix_init(main):
+    init()
+    assert main.called
