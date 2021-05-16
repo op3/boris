@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""makematrix cli for detector response matrix creation"""
+"""makematrix cli for detector response matrix creation."""
 
 from __future__ import annotations
 
@@ -31,8 +31,9 @@ from boris.app import make_matrix
 
 
 class MakeMatrixApp:
+    """CLI interface for make_matrix."""
+
     def __init__(self) -> None:
-        """CLI interface for make_matrix."""
         self.parse_args(sys.argv[1:])
         make_matrix(
             self.args.datfile,
@@ -85,6 +86,7 @@ class MakeMatrixApp:
 
 
 def init():
+    """Run app if executed directly"""
     if __name__ == "__main__":
         MakeMatrixApp()
 

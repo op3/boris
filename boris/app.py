@@ -19,10 +19,8 @@
 
 """boris command line interface."""
 
-import argparse
 import contextlib
 import logging
-import sys
 from pathlib import Path
 from typing import Any, Callable, Generator, List, Mapping, Optional
 
@@ -45,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging():
-    """Prepare logger, set message format"""
+    """Prepares logger, sets message format."""
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
@@ -140,7 +138,6 @@ def boris(
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
-
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist

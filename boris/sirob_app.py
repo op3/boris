@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""sirob cli for detector response convolution"""
+"""sirob cli for detector response convolution."""
 
 from __future__ import annotations
 
@@ -31,8 +31,9 @@ from boris.app import sirob
 
 
 class SirobApp:
+    """CLI interface for sirob."""
+
     def __init__(self) -> None:
-        """CLI interface for sirob."""
         self.parse_args(sys.argv[1:])
         sirob(
             self.args.matrixfile,
@@ -152,6 +153,7 @@ class SirobApp:
 
 
 def init():
+    """Run app if executed directly"""
     if __name__ == "__main__":
         SirobApp()
 

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris cli for detector response deconvolution"""
+"""boris cli for detector response deconvolution."""
 
 from __future__ import annotations
 
@@ -33,8 +33,9 @@ from boris.app import do_step, boris
 
 
 class BorisApp:
+    """CLI interface for boris"""
+
     def __init__(self) -> None:
-        """CLI interface for boris"""
         self.parse_args(sys.argv[1:])
         if self.args.seed:
             with do_step(
@@ -198,6 +199,7 @@ class BorisApp:
 
 
 def init():
+    """Run app if executed directly"""
     if __name__ == "__main__":
         BorisApp()
 

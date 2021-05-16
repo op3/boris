@@ -17,8 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
-
 import sys
 from unittest import mock
 

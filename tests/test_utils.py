@@ -75,8 +75,6 @@ def test__bin_edges_dict_2D():
     find_spec("uproot3") is None, reason="uproot3 not installed"
 )
 def test_numpy_to_root_hist_1D():
-    import uproot3 as uproot
-
     hist = np.random.uniform(size=10)
     bin_edges = np.linspace(0, 10, 11)
     res = numpy_to_root_hist(hist, bin_edges)
@@ -89,8 +87,6 @@ def test_numpy_to_root_hist_1D():
     find_spec("uproot3") is None, reason="uproot3 not installed"
 )
 def test_numpy_to_root_hist_2D():
-    import uproot3 as uproot
-
     hist = np.random.uniform(size=(10, 20))
     bin_edges = [np.linspace(0, 10, 11), np.linspace(0, 20, 21)]
     res = numpy_to_root_hist(hist, bin_edges)
@@ -104,8 +100,6 @@ def test_numpy_to_root_hist_2D():
     find_spec("uproot3") is None, reason="uproot3 not installed"
 )
 def test_numpy_to_root_hist_2D_trace():
-    import uproot3 as uproot
-
     hist = np.random.uniform(size=(100, 10))
     bin_edges = np.linspace(0, 10, 11)
     res = numpy_to_root_hist(hist, bin_edges)
@@ -315,7 +309,7 @@ def test_get_obj_by_name_not_found():
 
 def test_get_obj_bin_edges_1D():
     res = get_obj_bin_edges({"bin_edges": 1, "a": 3})
-    assert type(res) == list
+    assert isinstance(res, list)
     assert len(res) == 1
     assert res[0] == 1
 

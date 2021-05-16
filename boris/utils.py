@@ -735,7 +735,7 @@ def read_dat_file(
 
 
 class SimSpec(SimInfo):
-    """Simulation spectrum with metadata"""
+    """Simulation spectrum with metadata."""
 
     def __init__(
         self, path, detector, energy, nevents, scale=1.0, normalize=True
@@ -848,7 +848,7 @@ def create_matrix(
     )
     for i, energy in enumerate(bin_edges[:-1]):
         sim_energy = energy + rel_peak_pos * bin_width
-        for j, jenergy, weight in interpolate_grid(energies, sim_energy):
+        for _, jenergy, weight in interpolate_grid(energies, sim_energy):
             shift = int(np.round(sim_energy - jenergy))
             if shift < 0:
                 mat[i, 0:i] += (

@@ -6,8 +6,11 @@ output-format: grouped
 
 strictness: veryhigh
 doc-warnings: true
-test-warnings: true
-member-warnings: false
+test-warnings: false
+member-warnings: true
+
+bandit:
+    run: true
 
 pyroma:
     run: true

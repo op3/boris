@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris2spec cli for spectra creation from boris trace files"""
+"""boris2spec cli for spectra creation from boris trace files."""
 
 from __future__ import annotations
 
@@ -33,8 +33,9 @@ from boris.app import setup_logging, boris2spec
 
 
 class Boris2SpecApp:
+    """CLI interface for boris2spec."""
+
     def __init__(self) -> None:
-        """CLI interface for boris2spec."""
         setup_logging()
         self.parse_args(sys.argv[1:])
         boris2spec(
@@ -136,6 +137,7 @@ class Boris2SpecApp:
 
 
 def init():
+    """Run app if executed directly"""
     if __name__ == "__main__":
         Boris2SpecApp()
 

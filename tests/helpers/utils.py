@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Helpers for boris tests."""
+
 import sys
 import contextlib
 
@@ -44,7 +46,7 @@ def create_simulations(tmp_path, detectors=None, shift_axis=0.0):
 def hide_module(module):
     try:
         old = sys.modules[module]
-    except:
+    except BaseException:
         sys.modules[module] = None
         yield
         del sys.modules[module]
