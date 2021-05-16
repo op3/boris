@@ -228,6 +228,8 @@ def test_Boris2SpecApp(tmp_path):
         "--get-median",
         "--get-variance",
         "--get-std-dev",
+        "--get-min",
+        "--get-max",
         "--get-hdi",
         str(tmp_path / "incident.npz"),
         str(tmp_path / "output.npz"),

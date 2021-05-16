@@ -25,7 +25,7 @@ import contextlib
 import logging
 import sys
 from pathlib import Path
-from typing import Generator, List, Optional, Callable, Mapping
+from typing import Any, Callable, Generator, List, Mapping, Optional
 
 import numpy as np
 
@@ -52,7 +52,14 @@ def setup_logging():
 
 @contextlib.contextmanager
 def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
-    """Contextmanager to print helpful progress messages"""
+    """
+    Contextmanager to print helpful progress messages
+
+    :param text: Task that is going to be executed.
+    :param simple:
+        If True, execution message is logged only after execution completed,
+        otherwise, it is displayed before and after execution.
+    """
     if not simple:
         logger.info(f"{text} ...")
     try:
@@ -74,11 +81,6 @@ def boris(
     binning_factor: int,
     left: int,
     right: int,
-    ndraws: int,
-    tune: int,
-    thin: int,
-    burn: int,
-    cores: int,
     histname: Optional[str] = None,
     rema_name: str = "rema",
     background_spectrum: Optional[Path] = None,
@@ -88,15 +90,53 @@ def boris(
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
     deconvolute: Callable[..., Mapping] = deconvolute,
+    **kwargs: Any,
 ) -> None:
-    """Load response matrix and spectrum, sample MCMC chain,
-    write resulting trace to file.
+    r"""
+    Loads response matrix and spectrum, samples MCMC chain,
+    writes resulting trace to file.
 
-    Args:
-        matrix: Path of response matrix in root format
-        observed_spectrum: Read observed spetcrum from this path
-        incident_spectrum: Write incident spectrum trace to this path
-        histname: name of histogram in observed_spectrum to read (optional)
+    :param matrix: Path of container file containing the response matrix.
+    :param observed_spectrum:
+        Path of container file containing the observed spectrum.
+    :param incident_spectrum:
+        Write MCMC chain trace of incident spectrum to this file.
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
+    :param histname:
+        Name of histogram in observed_spectrum to read (optional)
+    :param rema_name:
+        Name of the detector response matrix in matrix file
+        (only required if not unique).
+    :param background_spectrum:
+        Path of container file containing background spectrum.
+    :param background_name:
+        Name of background spectrum, loaded from ``observed_spectrum``
+        or (if given) ``background_spectrum``.
+    :param background_scale:
+        Relative scale of background spectrum to observed spectrum
+        (e. g. ratio of live times).
+    :param cal_bin_centers:
+        Optional energy calibration polynomial that is used to
+        calibrate the energy of the bin_centers of the observed
+        spectrum and background spectrum. (hdtv-style calibration)
+    :param cal_bin_edges:
+        Optional energy calibration polynomial that is used to
+        calibrate the energy of the bin_edges of the observed
+        spectrum and background spectrum. (root-style calibration)
+    :param norm_hist:
+        Divide detector response matrix by this histogram
+        (e. g., to correct for number of simulated particles).
+    :param deconvolute: Function used for deconvolution.
+    :param \**kwargs:
+        Keyword arguments are passed to ``deconvolute`` function.
     """
 
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
@@ -136,11 +176,7 @@ def boris(
             spectrum,
             background,
             background_scale,
-            ndraws=ndraws,
-            tune=tune,
-            thin=thin,
-            burn=burn,
-            cores=cores,
+            **kwargs,
         )
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
@@ -165,11 +201,6 @@ class BorisApp:
             self.args.binning_factor,
             self.args.left,
             self.args.right,
-            self.args.ndraws,
-            self.args.tune,
-            self.args.thin,
-            self.args.burn,
-            self.args.cores,
             self.args.hist,
             self.args.rema_name,
             self.args.bg_spectrum,
@@ -178,6 +209,11 @@ class BorisApp:
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
             self.args.norm_hist,
+            ndraws=self.args.ndraws,
+            tune=self.args.tune,
+            thin=self.args.thin,
+            burn=self.args.burn,
+            cores=self.args.cores,
         )
 
     def parse_args(self, args: List[str]):
@@ -330,6 +366,50 @@ def sirob(
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
 ) -> None:
+    """
+    Performs convolution of incident spectrum with detector response matrix
+    to reproduce the incident spectrum, optionally with an additional
+    background contribution.
+
+    :param matrix: Path of container file containing the response matrix.
+    :param incident_spectrum:
+        Path of container file containing the incident spectrum.
+    :param observed_spectrum: Write resulting observed spectrum to this file.
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
+    :param histname:
+        Name of histogram in incident_spectrum to read (optional).
+    :param rema_name:
+        Name of the detector response matrix in matrix file
+        (only required if not unique).
+    :param background_spectrum:
+        Path of container file containing background spectrum.
+    :param background_name:
+        Name of background spectrum, loaded from ``incident_spectrum``
+        or (if given) ``background_spectrum``.
+    :param background_scale:
+        Relative scale of background spectrum to incident spectrum
+        (e. g. ratio of live times).
+    :param cal_bin_centers:
+        Optional energy calibration polynomial that is used to
+        calibrate the energy of the bin_centers of the incident
+        spectrum and background spectrum. (hdtv-style calibration)
+    :param cal_bin_edges:
+        Optional energy calibration polynomial that is used to
+        calibrate the energy of the bin_edges of the incident
+        spectrum and background spectrum. (root-style calibration)
+    :param norm_hist: Divide detector response matrix by this histogram
+        (e. g., to correct for number of simulated particles).
+    :param deconvolute: Function used for deconvolution.
+    :param kwargs: Passed to ``deconvolute`` function.
+    """
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
@@ -500,21 +580,34 @@ def boris2spec(
     # get_mode: bool = False,
     get_variance: bool = False,
     get_std_dev: bool = False,
+    get_min: bool = False,
+    get_max: bool = False,
     get_hdi: bool = False,
     hdi_prob: float = np.math.erf(np.sqrt(0.5)),
 ) -> None:
-    """Create spectra from boris trace file
+    """
+    Creates and/or plots spectra from boris trace file.
 
-    Args:
-        incident_spectrum: boris output for incident spectrum
-        output_path: Optionally write generated spectra to file
-        plot: Optionally display matplotlib window of all spectra
-        get_mean: Generate spectrum containing mean of each bin
-        get_median: Generate spectrum containing median of each bin
-        get_variance: Generate spectrum containing variane of each bin
-        get_std_dev: Generate spectrum containing standard deviation of each bin
-        get_hdi: Generate spectra containing highest density interval of each bin
-        hdi_prob: Probability for which the highest density interval will be computed
+    :param incident_spectrum:
+        Path of container file containing incident spectrum trace
+        generated by ``boris``.
+    :param output_path:
+        Path of container file which is created containing the generated
+        spectra (optional).
+    :param plot: Display matplotlib window of all spectra (optional).
+    :param get_mean: Generate spectrum containing mean of each bin.
+    :param get_median: Generate spectrum containing median of each bin.
+    :param get_variance: Generate spectrum containing variane of each bin.
+    :param get_std_dev:
+        Generate spectrum containing standard deviation of each bin.
+    :param get_min: Generate spectrum containing min of each bin.
+    :param get_max: Generate spectrum containing max of each bin.
+    :param get_hdi:
+        Generate spectra containing highest density interval of each bin
+        (also known as shortest coverage interval).
+    :param hdi_prob:
+        Probability for which the highest density interval will be computed.
+        Defaults to 1σ.
     """
     spec, bin_edges = read_spectrum(incident_spectrum, "incident")
     bin_edges = bin_edges[-1]
@@ -536,6 +629,12 @@ def boris2spec(
 
     if get_std_dev:
         res["std"] = np.std(spec, axis=0)
+
+    if get_min:
+        res["min"] = np.min(spec, axis=0)
+
+    if get_max:
+        res["max"] = np.max(spec, axis=0)
 
     if get_hdi:
         res["hdi_lo"], res["hdi_hi"] = hdi(spec, hdi_prob=hdi_prob)
@@ -561,6 +660,8 @@ def boris2spec(
             "mode": "Mode",
             "std": "Standard Deviation",
             "var": "Variance",
+            "min": "Minimum",
+            "max": "Maximum",
         }
 
         for key in label.keys():
@@ -588,6 +689,8 @@ class Boris2SpecApp:
             # self.args.get_mode,
             self.args.get_variance,
             self.args.get_std_dev,
+            self.args.get_min,
+            self.args.get_max,
             self.args.get_hdi,
             self.args.hdi_prob,
         )
@@ -604,32 +707,42 @@ class Boris2SpecApp:
         )
         parser.add_argument(
             "--get-mean",
-            help="get the mean for each bin",
+            help="Get the mean for each bin",
             action="store_true",
         )
         # parser.add_argument(
         #    "--get-mode",
-        #    help="get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
+        #    help="Get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
         #    action="store_true",
         # )
         parser.add_argument(
             "--get-median",
-            help="get the median for each bin",
+            help="Get the median for each bin",
             action="store_true",
         )
         parser.add_argument(
             "--get-variance",
-            help="get the variance for each bin",
+            help="Get the variance for each bin",
             action="store_true",
         )
         parser.add_argument(
             "--get-std-dev",
-            help="get the standard deviation for each bin",
+            help="Get the standard deviation for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-min",
+            help="Get the minimum for each bin",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--get-max",
+            help="Get the maximum for each bin",
             action="store_true",
         )
         parser.add_argument(
             "--get-hdi",
-            help="get the highest density interval for each bin",
+            help="Get the highest density interval for each bin",
             action="store_true",
         )
         parser.add_argument(

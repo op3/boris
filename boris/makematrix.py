@@ -35,7 +35,7 @@ from boris.utils import read_spectrum, get_keys_in_container, write_hists
 
 @dataclass
 class SimInfo:
-    """Keep track of simulation info"""
+    """Simulation info metadata"""
 
     path: Path
     energy: float
@@ -43,7 +43,16 @@ class SimInfo:
 
     @classmethod
     def from_dat_file_line(cls, line: str, sim_root: Path) -> SimInfo:
-        """Create SimInfo object from dat_file line"""
+        """
+        Creates SimInfo object from dat_file line
+
+        :param line:
+            Single line of dat file in format
+            ``<histogram>: <energy> <number of events``.
+        :param sim_root:
+            Root of simulation directory. Paths are given
+            relative to this directory.
+        """
         path, energy, nevents = line.split(" ")
         return cls(sim_root / path.rstrip(":"), float(energy), int(nevents))
 
@@ -54,15 +63,16 @@ class SimInfo:
 def read_dat_file(
     dat_file_path: Path, sim_root: Optional[Path] = None
 ) -> List[SimInfo]:
-    """Read and parse datfile
+    """Reads and parses datfile.
 
-    Args:
-        dat_file_path: Path to datfile
-        sim_root: Optional, root of simulation directory. Paths in
-            dat_file_path are given relative to this directory.
+    :param dat_file_path: Path to datfile.
+    :param sim_root:
+        Optional, root of simulation directory. Paths in
+        dat_file_path are given relative to this directory.
+        If ``None``, it is assumed that they are given relative
+        to ``dat_file_path``.
 
-    Returns:
-        List of SimInfo objects
+    :return: List of SimInfo objects
     """
     simulations = []
     sim_root = sim_root or dat_file_path.parents[0]
@@ -73,6 +83,8 @@ def read_dat_file(
 
 
 class SimSpec(SimInfo):
+    """Simulation spectrum with metadata"""
+
     def __init__(
         self, path, detector, energy, nevents, scale=1.0, normalize=True
     ):
@@ -86,26 +98,42 @@ class SimSpec(SimInfo):
         else:
             self.spec = self.orig_spec
 
-    def binning_convention(self):
+    def binning_convention(self) -> float:
         """
-        Determine relative shift of particle energy in comparison to bin width.
-        For tv-convention, this is 0.5, for root-convention, it is 0.0.
+        Determines relative shift of particle energy in comparison to bin width.
+        :return:
+            Binning convention. For tv-convention, this is 0.5,
+            for root-convention, it is 0.0.
         """
         ebin = self.find_bin(self.energy)
         return (self.energy - self.bin_edges[ebin]) / (
             self.bin_edges[ebin + 1] - self.bin_edges[ebin]
         )
 
-    def find_bin(self, energy):
-        """Find bin number for bin containing energy"""
+    def find_bin(self, energy) -> int:
+        """
+        Finds bin number for bin containing ``energy``.
+
+        :param energy: Find bin containing this energy
+        :return: Bin number
+        """
         return np.digitize(energy, self.bin_edges) - 1
 
 
-def interpolate_grid(grid: np.ndarray, point: float):
+def interpolate_grid(
+    grid: np.ndarray, point: float
+) -> List[Tuple[int, float, float]]:
     """
-    Return:
-        List, containing:
-            (index, gridpoint, weight)
+    Creates a linear interpolation to ̀ `point`` given a 1D-grid.
+    Finds the two closest grid points and assigns weights corresponding
+    to the distance to the point. Uses only one grid point if ``point``
+    is outside the grid.
+
+    :param grid: 1D-array containing grid points
+    :param point: Interpolate to this point
+
+    :return:
+        List of (index, gridpoint, weight)
     """
     digit = np.digitize(point, grid)
     if digit == 0:
@@ -120,13 +148,36 @@ def interpolate_grid(grid: np.ndarray, point: float):
 def create_matrix(
     simulations: List[SimInfo],
     detector: str,
-    max_energy: float = None,
-    scale: float = 1e3,
+    max_energy: Optional[float] = None,
+    scale_hist_axis: float = 1e3,
     normalize: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Creates detector response matrix.
+
+    :param simulations:
+        List of simulations used to create the detector response matrix.
+    :param detector:
+        Name of detector.
+    :param max_energy:
+        Limit maximum energy of detector response matrix. If ``None``,
+        use the maximum simulated energy.
+    :param scale_hist_axis:
+        Scale energy axis of simulations with this parameter, for example,
+        to convert MeV to keV.
+    :param normalize:
+        Divide matrix by number of simulated particles.
+    :return: Detector response matrix and bin edges for both axes.
+    """
+
     specs = {
         sim.energy: SimSpec(
-            sim.path, detector, sim.energy, sim.nevents, scale, normalize
+            sim.path,
+            detector,
+            sim.energy,
+            sim.nevents,
+            scale_hist_axis,
+            normalize,
         )
         for sim in simulations
     }
@@ -162,14 +213,33 @@ def create_matrix(
 
 
 def make_matrix(
-    dat_path: Path,
+    dat_file_path: Path,
     output_path: Path,
     dets: Optional[List[str]] = None,
     max_energy: Optional[float] = None,
     scale_hist_axis: float = 1e3,
     sim_dir: Optional[Path] = None,
 ) -> None:
-    simulations = read_dat_file(dat_path, sim_dir)
+    """
+    Makes and writes matrix by reading dat file and simulation histograms.
+
+    :param dat_file_path: Path to datfile.
+    :param output_path: Path of created detector response matrix file.
+    :param dets: List of detectors to create detector response matrices for.
+        If ``None``, detector response matrices are created for all
+        found detectors.
+    :param max_energy:
+        Limit maximum energy of detector response matrix. If ``None``,
+        use the maximum simulated energy.
+    :param scale_hist_axis:
+        Scale energy axis of simulations with this parameter, for example,
+        to convert MeV to keV.
+    :param sim_dir:
+        Root of simulation directory. Paths in ``dat_file_path`` are
+        given relative to this directory. If ``None``, it is assumed
+        that they are given relative to ``dat_file_path``.
+    """
+    simulations = read_dat_file(dat_file_path, sim_dir)
     dets = dets or get_keys_in_container(simulations[0].path)
     remas = {
         det: create_matrix(simulations, det, max_energy, scale_hist_axis)

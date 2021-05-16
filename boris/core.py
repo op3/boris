@@ -36,21 +36,20 @@ def deconvolute(
     **kwargs,
 ) -> pm.backends.base.MultiTrace:
     """
-    Generate a MCMC chain, deconvoluting spectrum using rema
+    Generates a MCMC chain, deconvolutes spectrum using given
+    response matrix.
 
-    Args:
-        rema: response matrix of the detector
-        spectrum: observed spectrum
-        background: background spectrum
-        background_scale: relative live time of background spectrum
-        ndraws: number of draws to sample
-        tune: number of steps to tune parameters
-        thin: thinning factor to decrease autocorrelation time
-        burn: discard initial steps (burn-in time)
-        **kwargs are passed to PyMC3.sample
+    :param rema: Response matrix of the detector
+    :param spectrum: Observed spectrum
+    :param background: Background spectrum
+    :param background_scale: Relative live time of background spectrum
+    :param ndraws: Number of draws to sample
+    :param tune: Number of steps to tune parameters
+    :param thin: Thinning factor to decrease autocorrelation time
+    :param burn: Discard initial steps (burn-in time)
+    :param \**kwargs: Keyword arguments are passed to ``PyMC3.sample``.
 
-    Returns:
-        thinned and burned MCMC trace
+    :return: Thinned and burned MCMC trace.
     """
     background_scale = 1 / background_scale
     if background is None:

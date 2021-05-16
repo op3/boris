@@ -32,16 +32,15 @@ logger = logging.getLogger(__name__)
 def numpy_to_root_hist(
     hist: np.ndarray,
     bin_edges: Union[np.ndarray, Tuple[np.ndarray], List[np.ndarray]],
-):
+) -> Any:
     """
-    Convert numpy histogram with bin edges to root histogram (TH1 or TH2)
-    Args:
-        hist: histogram
-        bin_edges: numpy array or tuple of numpy arrays containing bin edges
-    Returns:
-        root histogram with bin_edges
+    Converts numpy histogram with bin edges to root histogram (TH1 or TH2)
+
+    :param hist: numpy histogram (1D or 2D)
+    :param bin_edges:
+        numpy array or tuple of numpy arrays containing bin edges
+    :return: Root histogram with bin_edges
     """
-    # TODO: Discard sumw2?
     if hist.ndim == 1:
         from uproot3_methods.classes.TH1 import from_numpy
 
@@ -76,8 +75,13 @@ def _bin_edges_dict(
     bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
 ) -> Dict[str, np.ndarray]:
     """
-    Create dictionary of multiple bin_edges arrays for file formats
-    that don’t support expliciting writing bin_edges.
+    Creates dictionary of multiple bin_edges arrays for file formats
+    that don’t support explicitly writing bin_edges.
+
+    :param bin_edges: array or list/tuple of arrays containing bin_edges.
+    :return:
+        Dictionary of bin_edges arrays that can be included in a
+        container file.
     """
     if isinstance(bin_edges, (list, tuple)):
         return {
@@ -94,7 +98,15 @@ def write_hist(
     hist: np.ndarray,
     bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
 ) -> None:
-    """Write single histogram to file"""
+    """
+    Writes single histogram to file.
+
+    :param histfile: Path of created container file.
+    :param name: Name of histogram in container file.
+    :param hist: Histogram.
+    :param bin_edges: Bin edges.
+    """
+    # TODO: Remove, only use write_hists()
     if histfile.exists():
         raise Exception(f"Error writing {histfile}, already exists.")
     if histfile.suffix == ".npz":
@@ -145,7 +157,13 @@ def write_hists(
     bin_edges: Union[np.ndarray, List[np.ndarray]],
     output_path: Path,
 ) -> None:
-    """Write multiple histograms to file."""
+    """
+    Writes multiple histograms to file.
+
+    :param hists: Dictionary of histograms.
+    :param bin_edges: Bin edges, assumed to be equal for all histograms.
+    :param output_path: Path of created container file.
+    """
     if output_path.suffix == ".txt":
         for hist in hists.values():
             if hist.ndim != 1:
@@ -189,7 +207,13 @@ def write_hists(
 
 
 def get_filetype(path: Path) -> Optional[str]:
-    """Determine file format of path using magic bytes"""
+    """
+    Determines file format of path using magic bytes.
+    Supports root-files, hdf5 and non-empty zip-files (used by npz).
+
+    :param path: Path of file.
+    :return: Mimetype of file or ``None``, if not sure.
+    """
     with open(path, "rb") as f:
         header = f.read(4)
         return {
@@ -202,14 +226,15 @@ def get_filetype(path: Path) -> Optional[str]:
 def get_bin_edges(
     hist: np.ndarray,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
-    """Try to determine if hist contains binning information.
+    """
+    Trys to determine if 2D hist contains column(s) with binning information.
 
-    Args:
-        hist: histogram from txt file
+    :param hist: Histogram
 
-    Returns:
-        Extracted histogram
-        bin edges of histogram or None, if not available
+    :return:
+        - Extracted histogram
+        - Bin edges of histogram or None, if not available
+    :raises: ValueError
     """
     if hist.ndim != 2 or hist.shape[1] < 2:
         raise ValueError(
@@ -224,36 +249,34 @@ def get_bin_edges(
             raise ValueError(
                 "Lower and upper bin edges (column 0 and 1) are not continuous."
             )
-    if hist.shape[1] == 2:
-        diff = np.diff(hist[:, 0]) / 2
-        return (
-            hist[:, 1],
-            [
-                np.concatenate(
-                    [
-                        [hist[0, 0] - diff[0]],
-                        hist[1:, 0] - diff,
-                        [hist[-1, 0] + diff[-1]],
-                    ]
-                )
-            ],
-        )
+    diff = np.diff(hist[:, 0]) / 2
+    return (
+        hist[:, 1],
+        [
+            np.concatenate(
+                [
+                    [hist[0, 0] - diff[0]],
+                    hist[1:, 0] - diff,
+                    [hist[-1, 0] + diff[-1]],
+                ]
+            )
+        ],
+    )
 
 
 def get_obj_by_name(
     mapping: Mapping[str, Any], name: Optional[str] = None
 ) -> Any:
-    """Return object from mapping
+    """
+    Returns object from mapping.
 
     If a name is provided, the object is returned by name. If no name
     is provided and the mapping contains only one object, this object
     is returned.
 
-    Args:
-        mapping: Mapping such as dictionary or uproot-file
-        name: Optional name of object to return
-    Returns:
-        Object, if a unique mapping is found
+    :param mapping: Mapping such as dictionary or container file.
+    :param name: Optional name of object to return.
+    :return: Object, if a unique mapping is found.
     """
     if name:
         return mapping[name]
@@ -265,6 +288,12 @@ def get_obj_by_name(
 
 
 def get_obj_bin_edges(mapping: Mapping[str, Any]) -> List[np.ndarray]:
+    """
+    Returns bin edges from mapping.
+
+    :param mapping: Mapping such as dictionary or container file.
+    :return: List of bin edges arrays.
+    """
     if "bin_edges" in mapping:
         return [mapping["bin_edges"]]
     bin_edges_keys = sorted(
@@ -276,7 +305,12 @@ def get_obj_bin_edges(mapping: Mapping[str, Any]) -> List[np.ndarray]:
 
 
 def get_keys_in_container(path: Path) -> List[str]:
-    """Return all keys that are available in container"""
+    """
+    Returns all keys that are available in a container.
+
+    :param path: Path of container file.
+    :return: List of available keys.
+    """
     filetype = get_filetype(path)
     if filetype == "application/root":
         import uproot
@@ -299,16 +333,16 @@ def read_spectrum(
     histname: Optional[str] = None,
     extract_bin_edges: bool = True,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
-    """Read spectrum to numpy array.
+    """
+    Reads spectrum to numpy array.
 
-    Args:
-        spectrum: Path of spectrum file
-        histname: Name of histogram in spectrum file to load (optional)
-        extract_bin_edges: Determine bin edges of spectrum
+    :param spectrum: Path of spectrum file.
+    :param histname: Name of histogram in spectrum file to load (optional).
+    :param extract_bin_edges: Determine bin edges of spectrum.
 
-    Returns:
-        Extracted histogram
-        Bin edges of spectrum or None, if not available
+    :return:
+        - Extracted histogram.
+        - List of bin edges of spectrum, empty if not available.
     """
     filetype = get_filetype(spectrum)
     if filetype == "application/root":
@@ -355,19 +389,20 @@ def read_pos_int_spectrum(
     atol: float = 1e-08,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
     """
-    Read spectrum to numpy array of type np.integer. The spectrum must
-    contain no negative bins.
+    Reads spectrum to numpy array of type np.integer. The spectrum must
+    not contain negative bins.
 
-    Args:
-        spectrum: Path of spectrum file
-        histname: Name of histogram in spectrum file to load (optional)
-        extract_bin_edges: Determine bin edges of spectrum
-        rtol: The relative tolerance parameter (optional, passed to numpy.isclose)
-        atol: The absolute tolerance parameter (optional, passed to numpy.isclose)
+    :param spectrum: Path of spectrum file.
+    :param histname: Name of histogram in spectrum file to load (optional).
+    :param extract_bin_edges: Determine bin edges of spectrum.
+    :param rtol:
+        The relative tolerance parameter (optional, passed to numpy.isclose).
+    :param atol:
+        The absolute tolerance parameter (optional, passed to numpy.isclose).
 
-    Returns:
-        Extracted histogram
-        Bin edges of spectrum or None, if not available
+    :return:
+        - Extracted histogram
+        - Bin edges of spectrum or None, if not available
     """
     spectrum, spectrum_bin_edges = read_spectrum(
         path, histname, extract_bin_edges
@@ -397,18 +432,22 @@ def read_rebin_spectrum(
     cal_bin_edges: Optional[List[float]] = None,
     filter_spectrum: Optional[Callable[[np.ndarray], np.ndarray]] = None,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
-    """Read and rebin spectrum.
+    """
+    Reads and rebin spectrum.
 
-    Args:
-        spectrum: Path to file containing spectrum
-        bin_edges_rebin: Rebin spectrum to this bin_edges array
-        histname: Provide object name for files containing multiple objects
-        cal_bin_centers: Bin centers to calibrate spectrum before rebinning
-        cal_bin_edges: Bin edges to calibrate spectrum before rebinning
-        filter_spectrum: Apply filter function to spetrum before rebinning
-    Returns:
-        Histogram
-        Bin edges
+    :param spectrum: Path to file containing spectrum.
+    :param bin_edges_rebin: Rebin spectrum to this bin_edges array.
+    :param histname:
+        Provide object name for files containing multiple objects.
+    :param cal_bin_centers:
+        Bin centers to calibrate spectrum before rebinning.
+    :param cal_bin_edges:
+        Bin edges to calibrate spectrum before rebinning.
+    :param filter_spectrum:
+        Apply filter function to spetrum before rebinning.
+    :return:
+        - Histogram
+        - Bin edges
     """
     if cal_bin_centers or cal_bin_edges:
         spectrum, included_bin_edges = read_pos_int_spectrum(
@@ -441,7 +480,14 @@ def hdi(
     hdi_prob: Union[float, np.number] = np.math.erf(np.sqrt(0.5)),
 ) -> Tuple[float, float]:
     """
-    Calculate highest density interval (HDI) of sample for given probability
+    Calculates highest density interval (HDI) of sample.
+
+    :param sample: Sample to calculate hdi for.
+    :param hdi_prob:
+        The highest density interval is calculated for this probiblity.
+    :return:
+        - Lower edge of highest density interval.
+        - Upper edge of highest density interval.
     """
     sample.sort(axis=0)
     interval = int(np.ceil(len(sample) * (1 - hdi_prob)))
@@ -457,18 +503,23 @@ def reduce_binning(
     right: float = np.inf,
 ) -> Tuple[int, int]:
     """
-    Crop bin_edges to left and right and reduce the binning by binning_factor.
-    Both left and right are included in the resulting axis.
+    Crops bin_edges to left and right and reduces the binning by
+    binning_factor. Both left and right are included in the resulting axis.
 
-    Args:
-        bin_edges: bin_edges array to work on
-        binning_factor: Determines, how many neighboring bins are joined
-        left: Crop bin_edges to the lowest bin still containing left.
-        right: Crop resulting bin_edges to the highest bin still containing right.
+    :param bin_edges: bin_edges array to work on.
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
 
-    Returns:
-        index of original bin_edges which is lowest bin edge of resulting axis
-        index of original bin_edges which is highest bin edge of resulting axis
+    :return:
+        - Index of original bin_edges for lowest bin edge of resulting axis.
+        - Index of original bin_edges for highest bin edge of resulting axis.
     """
     left_bin = np.argmax(left < bin_edges[1:])
     right_bin = left_bin + (
@@ -485,21 +536,28 @@ def rebin_hist(
     left: float = -np.inf,
     right: float = np.inf,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Rebin hist with dimension $N^M$.
+    """
+    Rebins hist with dimension $N^M$.
 
     The binning is reduced by a factor of bin_width, i.e. neighboring
     bins are summed.
 
-    Args:
-        hist: Input matrix of type $N^M$ (N bins, M dimensions)
-        binning_factor: rebinning factor, group this many bins together
-        bin_edges: Optional bin_edges array of hist, defaults to [0., 1., ...]
-        left: lower edge of first bin of resulting matrix
-        right: maximum upper edge of last bin of resulting matrix
+    :param hist: Input matrix of type $N^M$ (N bins, M dimensions).
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param bin_edges:
+        Optional bin_edges array of hist, defaults to ``[0., 1., ...]``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
 
-    Returns:
-        rebinned matrix
-        resulting bin edges
+    :return:
+        - Rebinned matrix
+        - Resulting bin edges
     """
     if bin_edges is None:
         bin_edges = np.arange(0.0, hist.shape[0] + 1)
@@ -523,20 +581,19 @@ def rebin_hist(
 def rebin_uniform(
     hist: np.ndarray, bin_edges: np.ndarray, bin_edges_new: np.ndarray
 ) -> np.ndarray:
-    """Rebin hist from binning bin_edges to bin_edges_new.
+    """
+    Rebins hist from binning bin_edges to bin_edges_new.
 
     Each count in the original histogram is randomly placed within
     the limits of the corresponding bin following a uniform probability
     distribution. A new histogram with bin edges bin_edges_new is
     filled with the resulting data.
 
-    Args:
-        hist: Original histogram to rebin.
-        bin_edges: bin edges of original histogram.
-        bin_edges_new: bin edges of rebinned histogram.
+    :param hist: Original histogram to rebin.
+    :param bin_edges: bin edges of original histogram.
+    :param bin_edges_new: bin edges of rebinned histogram.
 
-    Returns:
-        rebinned histogram
+    :return: Rebinned histogram.
     """
     if not issubclass(hist.dtype.type, np.integer):
         raise ValueError("Histogram has to be of type integer")
@@ -555,17 +612,17 @@ def load_rema(
     hist_norm: Optional[str] = None,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
     """
-    Load detector response matrix from file.
+    Loads detector response matrix from file.
 
-    Args:
-        path: Path of container file containing response matrix
-        hist_rema : Name of histogram for response matrix
-        hist_norm: Name of histogram used for normalization
-            (e.g. containing number of simulated particles)
+    :param path: Path of container file containing response matrix.
+    :param hist_rema : Name of histogram for response matrix.
+    :param hist_norm:
+        Name of histogram used for normalization (e.g. containing
+        number of simulated particles).
 
-    Returns:
-        response matrix
-        List of bin_edges arrays
+    :return:
+        - Response matrix
+        - List of bin_edges arrays
     """
     rema, bin_edges = read_spectrum(path, hist_rema)
     if (
@@ -596,23 +653,28 @@ def get_rema(
     hist_norm: Optional[str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Obtain the response matrix (name given by hist_rema) from the container
-    file at path. Optionally normalize using histogram given by hist_norm.
-    The response matrix is cropped to left and right and rebinned to
-    binning_factor.
+    Obtains the response matrix from container file, optionally applying
+    a normalization. Crops response matrix to ``left``and ``right`` and
+    does rebinning by ``binning_factor``.
 
-    Args:
-        path: path of container file
-        hist_rema: Name of detector respone matrix histogram,
-        binning_factor: rebinning factor, group this many bins together
-        left: lower boundary of cropped matrix
-        right: maximum upper boundary of cropped matrix.
-        hist_norm: Divide detector response matrix by this histogram, e. g.
-            to scale the matrix by the number of simulated particles
+    :param path: Path of container file.
+    :param hist_rema: Name of detector respone matrix histogram.
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
+    :param hist_norm:
+        Divide detector response matrix by this histogram, e. g.
+        to scale the matrix by the number of simulated particles
 
-    Returns:
-        response matrix
-        bin_edges
+    :return:
+        - Response matrix
+        - Bin edges
     """
     rema, bin_edges = load_rema(path, hist_rema, hist_norm)
     bin_edges = bin_edges[0]

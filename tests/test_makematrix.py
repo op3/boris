@@ -131,14 +131,14 @@ def create_simulations(tmp_path, detectors=None, shift_axis=0.0):
 def test_create_matrix(tmp_path):
     simulations = create_simulations(tmp_path)
 
-    mat, bin_edges, bin_edges2 = create_matrix(simulations, "det1", scale=1.0)
+    mat, bin_edges, bin_edges2 = create_matrix(simulations, "det1", scale_hist_axis=1.0)
     assert (bin_edges == bin_edges2).all()
     assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 600
     assert np.isclose(bin_edges[0], 0.0)
     assert np.isclose(bin_edges[-1], 600.0)
 
     mat, bin_edges, bin_edges2 = create_matrix(
-        simulations, "det1", scale=1.0, max_energy=1000.0
+        simulations, "det1", scale_hist_axis=1.0, max_energy=1000.0
     )
     assert (bin_edges == bin_edges2).all()
     assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 1000
@@ -148,7 +148,7 @@ def test_create_matrix_tv(tmp_path):
     simulations = create_simulations(
         tmp_path, detectors=["det2"], shift_axis=-0.5
     )
-    mat, bin_edges, bin_edges2 = create_matrix(simulations, "det2", scale=1.0)
+    mat, bin_edges, bin_edges2 = create_matrix(simulations, "det2", scale_hist_axis=1.0)
     assert (bin_edges == bin_edges2).all()
     assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 601
     assert np.isclose(bin_edges[0], -0.5)
