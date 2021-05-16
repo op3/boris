@@ -21,22 +21,26 @@ import pytest
 
 import sys
 import logging
-from unittest import mock
+from importlib.util import find_spec
+from pathlib import Path
 
 import numpy as np
 
 import boris.app
+from boris.boris_app import BorisApp
+from boris.sirob_app import SirobApp
+from boris.boris2spec_app import Boris2SpecApp
+from boris.makematrix_app import MakeMatrixApp
 from boris.app import (
-    BorisApp,
-    SirobApp,
-    Boris2SpecApp,
-    sirob,
-    setup_logging,
-    logger,
     do_step,
-    init,
+    logger,
+    make_matrix,
+    setup_logging,
+    sirob,
 )
 from boris.utils import write_hist, read_spectrum
+
+from tests.helpers.utils import create_simulations
 
 
 @pytest.mark.parametrize(
@@ -45,57 +49,15 @@ from boris.utils import write_hist, read_spectrum
         (BorisApp, "boris"),
         (SirobApp, "sirob"),
         (Boris2SpecApp, "boris2spec"),
+        (MakeMatrixApp, "makematrix"),
     ],
 )
 def test_help(app, name):
-    sys.argv = ["boris", "--help"]
+    sys.argv = [name, "--help"]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         app()
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 0
-
-
-def test_BorisApp(tmp_path):
-    sys.argv = [
-        "boris",
-        "--seed=0",
-        "--left=2000",
-        "--right=2200",
-        "--binning-factor=1",
-        "--tune=50",
-        "--burn=50",
-        "--bg-spectrum",
-        str(tmp_path / "background.npz"),
-        str(tmp_path / "rema.npz"),
-        str(tmp_path / "observed.npz"),
-        str(tmp_path / "incident.npz"),
-    ]
-    rema = 0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2)
-    bin_edges = np.linspace(2000, 2200, 11)
-    incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
-    background = np.random.uniform(10, 100, size=10).astype(np.int64)
-    observed = (incident @ rema).astype(np.int64)
-    observed = (incident @ rema + background).astype(np.int64)
-    write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
-    write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
-    write_hist(tmp_path / "background.npz", "background", background, bin_edges)
-    BorisApp()
-    assert (tmp_path / "incident.npz").exists()
-
-    sys.argv = [
-        "boris",
-        "--seed=0",
-        "--left=2000",
-        "--right=2200",
-        "--binning-factor=1",
-        "--tune=50",
-        "--burn=50",
-        str(tmp_path / "rema.npz"),
-        str(tmp_path / "observed.npz"),
-        str(tmp_path / "incident_wobg.npz"),
-    ]
-    BorisApp()
-    assert (tmp_path / "incident_wobg.npz").exists()
 
 
 def test_sirob(tmp_path):
@@ -217,97 +179,39 @@ def test_boris(tmp_path):
     assert (tmp_path / "incident_bg.npz").exists()
 
 
-def test_Boris2SpecApp(tmp_path):
-    incident = np.ones((100, 10))
-    bin_edges = np.linspace(2000, 2200, 11)
-    write_hist(tmp_path / "incident.npz", "incident", incident, bin_edges)
+@pytest.mark.parametrize(
+    "filename",
+    [
+        ("rema.root"),
+        ("rema.npz"),
+        pytest.param(
+            ("rema.hdf5"),
+            marks=pytest.mark.skipif(
+                find_spec("h5py") is None, reason="Module h5py not installed"
+            ),
+        ),
+    ],
+)
+def test_make_matrix(tmp_path, filename):
+    detectors = ["det1", "det2"]
+    simulations = create_simulations(tmp_path, detectors)
 
-    sys.argv = [
-        "boris2spec",
-        "--get-mean",
-        "--get-median",
-        "--get-variance",
-        "--get-std-dev",
-        "--get-min",
-        "--get-max",
-        "--get-hdi",
-        str(tmp_path / "incident.npz"),
-        str(tmp_path / "output.npz"),
-    ]
-    Boris2SpecApp()
-    assert (tmp_path / "output.npz").exists()
-    mean, (bin_edges,) = read_spectrum(tmp_path / "output.npz", "mean")
-    assert np.isclose(mean, np.ones(10)).all()
-    assert bin_edges.shape[0] == 11
+    path = tmp_path / "sim.dat"
+    with open(path, "w") as f:
+        for sim in simulations:
+            print(sim.to_dat_file_line(), file=f, end="\n")
 
-    for key in ["mean", "median", "var", "std", "hdi_lo", "hdi_hi"]:
-        res, (bin_edges,) = read_spectrum(tmp_path / "output.npz", key)
-        assert res.ndim == 1
-        assert res.shape[0] == 10
-
-
-@mock.patch.object(boris.app, "sirob")
-def test_SirobApp(mock_sirob):
-    sys.argv = ["sirob", "rema.npz", "incident.npz", "observed.npz"]
-    SirobApp()
-    assert mock_sirob.called
-
-
-@mock.patch("matplotlib.pyplot")
-def test_Boris2SpecApp_plot(mock_plt, tmp_path):
-    incident = np.ones((100, 10))
-    bin_edges = np.linspace(2000, 2200, 11)
-    write_hist(tmp_path / "incident.npz", "incident", incident, bin_edges)
-
-    sys.argv = [
-        "boris2spec",
-        "--get-mean",
-        "--get-hdi",
-        "--plot",
-        str(tmp_path / "incident.npz"),
-    ]
-    Boris2SpecApp()
-    assert mock_plt.legend.called
-    assert mock_plt.show.called
-
-
-def test_Boris2SpecApp_wrong_args(tmp_path):
-    sys.argv = ["boris2spec", str(tmp_path / "incident.npz")]
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        Boris2SpecApp()
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 2
-
-    sys.argv = [
-        "boris2spec",
-        str(tmp_path / "incident.npz"),
-        str(tmp_path / "output.npz"),
-    ]
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        Boris2SpecApp()
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 2
-
-
-@mock.patch("boris.app.SirobApp")
-@mock.patch("boris.app.__name__", "__main__")
-def test_app_init_SirobApp(app):
-    sys.argv = ["sirob"]
-    init()
-    assert app.called
-
-
-@mock.patch("boris.app.BorisApp")
-@mock.patch("boris.app.__name__", "__main__")
-def test_app_init_BorisApp(app):
-    sys.argv = ["boris"]
-    init()
-    assert app.called
-
-
-@mock.patch("boris.app.Boris2SpecApp")
-@mock.patch("boris.app.__name__", "__main__")
-def test_app_init_Boris2SpecApp(app):
-    sys.argv = ["boris2spec"]
-    init()
-    assert app.called
+    make_matrix(
+        path,
+        tmp_path / filename,
+        detectors,
+        sim_dir=Path("/"),
+        scale_hist_axis=1.0,
+    )
+    assert (tmp_path / filename).exists()
+    for det in detectors:
+        mat, (bin_edges, bin_edges2) = read_spectrum(tmp_path / filename, det)
+        assert (bin_edges == bin_edges2).all()
+        assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 600
+        assert np.isclose(bin_edges[0], 0.0)
+        assert np.isclose(bin_edges[-1], 600.0)

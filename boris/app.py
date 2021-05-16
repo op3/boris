@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #  SPDX-License-Identifier: GPL-3.0+
 #
 # Copyright © 2020–2021 O. Papst.
@@ -31,12 +30,15 @@ import numpy as np
 
 from boris.core import deconvolute
 from boris.utils import (
+    create_matrix,
+    get_keys_in_container,
     get_rema,
-    write_hist,
-    write_hists,
+    hdi,
+    read_dat_file,
     read_rebin_spectrum,
     read_spectrum,
-    hdi,
+    write_hist,
+    write_hists,
 )
 
 logger = logging.getLogger(__name__)
@@ -185,171 +187,6 @@ def boris(
         )
 
 
-class BorisApp:
-    def __init__(self) -> None:
-        """CLI interface for boris."""
-        self.parse_args(sys.argv[1:])
-        if self.args.seed:
-            with do_step(
-                f"Setting numpy seed to {self.args.seed}", simple=True
-            ):
-                np.random.seed(int(self.args.seed))
-        boris(
-            self.args.matrixfile,
-            self.args.observed_spectrum,
-            self.args.incident_spectrum,
-            self.args.binning_factor,
-            self.args.left,
-            self.args.right,
-            self.args.hist,
-            self.args.rema_name,
-            self.args.bg_spectrum,
-            self.args.bg_hist,
-            self.args.bg_scale,
-            self.args.cal_bin_centers,
-            self.args.cal_bin_edges,
-            self.args.norm_hist,
-            ndraws=self.args.ndraws,
-            tune=self.args.tune,
-            thin=self.args.thin,
-            burn=self.args.burn,
-            cores=self.args.cores,
-        )
-
-    def parse_args(self, args: List[str]):
-        """Parse CLI arguments."""
-        parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "-l",
-            "--left",
-            help="lower edge of first bin of deconvoluted spectrum",
-            type=int,
-            default=0,
-        )
-        parser.add_argument(
-            "-r",
-            "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum",
-            type=int,
-            default=None,
-        )
-        parser.add_argument(
-            "-b",
-            "--binning-factor",
-            help="rebinning factor, group this many bins together",
-            type=int,
-            default=10,
-        )
-        parser.add_argument("-s", "--seed", help="set random seed")
-        parser.add_argument(
-            "-c",
-            "--cores",
-            help="number of cores to utilize",
-            default=1,
-            type=int,
-        )
-        parser.add_argument(
-            "--thin",
-            help="thin the resulting trace by a factor",
-            default=1,
-            type=int,
-        )
-        parser.add_argument(
-            "--tune",
-            help="number of initial steps used to tune the model",
-            default=1000,
-            type=int,
-        )
-        parser.add_argument(
-            "--burn",
-            help="number of initial steps to discard (burn-in phase)",
-            default=1000,
-            type=int,
-        )
-        parser.add_argument(
-            "-n",
-            "--ndraws",
-            help="number of samples to draw per core",
-            default=2000,
-            type=int,
-        )
-        parser.add_argument(
-            "-H",
-            "--hist",
-            help="name of histogram in observed_spectrum to read (optional)",
-            default=None,
-            type=str,
-        )
-        parser.add_argument(
-            "--bg-spectrum",
-            help="path to observed background spectrum (optional)",
-            default=None,
-            type=Path,
-        )
-        parser.add_argument(
-            "--bg-hist",
-            help="name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional)",
-            default=None,
-            type=str,
-        )
-        parser.add_argument(
-            "--bg-scale",
-            help="relative scale of background spectrum live time to observed spectrum live time (optional)",
-            default=1.0,
-            type=float,
-        )
-
-        calgroup = parser.add_mutually_exclusive_group()
-        calgroup.add_argument(
-            "--cal-bin-centers",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin centers of the observed spectrum, if bins are unknown (tv style calibration)",
-            type=float,
-            nargs="+",
-        )
-        calgroup.add_argument(
-            "--cal-bin-edges",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin edges of the observed spectrum, if bins are unknown",
-            type=float,
-            nargs="+",
-        )
-        parser.add_argument(
-            "--rema-name",
-            help="Name of the detector response matrix in matrix file",
-            default="rema",
-            nargs=1,
-            type=str,
-        )
-        parser.add_argument(
-            "--norm-hist",
-            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
-            nargs="?",
-            default=None,
-            type=str,
-        )
-
-        parser.add_argument(
-            "matrixfile",
-            help="container file containing detector response matrix",
-            type=Path,
-        )
-        parser.add_argument(
-            "observed_spectrum",
-            help="txt file containing the observed spectrum",
-            type=Path,
-        )
-        parser.add_argument(
-            "incident_spectrum",
-            help="write trace of incident spectrum to this path",
-            type=Path,
-        )
-
-        self.args = parser.parse_args(args)
-
-
 def sirob(
     matrix: Path,
     incident_spectrum: Path,
@@ -448,127 +285,6 @@ def sirob(
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
         write_hist(observed_spectrum, "observed", observed, spectrum_bin_edges)
-
-
-class SirobApp:
-    def __init__(self) -> None:
-        """CLI interface for sirob."""
-        self.parse_args(sys.argv[1:])
-        sirob(
-            self.args.matrixfile,
-            self.args.rema_name,
-            self.args.incident_spectrum,
-            self.args.observed_spectrum,
-            self.args.binning_factor,
-            self.args.left,
-            self.args.right,
-            self.args.hist,
-            self.args.bg_spectrum,
-            self.args.bg_hist,
-            self.args.bg_scale,
-            self.args.cal_bin_centers,
-            self.args.cal_bin_edges,
-            self.args.norm_hist,
-        )
-
-    def parse_args(self, args: List[str]):
-        """Parse CLI arguments."""
-        parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "-l",
-            "--left",
-            help="lower edge of first bin of deconvoluted spectrum",
-            type=int,
-            default=0,
-        )
-        parser.add_argument(
-            "-r",
-            "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum",
-            type=int,
-            default=None,
-        )
-        parser.add_argument(
-            "-b",
-            "--binning-factor",
-            help="rebinning factor, group this many bins together",
-            type=int,
-            default=10,
-        )
-        parser.add_argument(
-            "-H",
-            "--hist",
-            help="Name of histogram in incident_spectrum to read (optional)",
-            default=None,
-            type=str,
-        )
-        parser.add_argument(
-            "--bg-spectrum",
-            help="path to observed background spectrum (optional)",
-            default=None,
-            type=Path,
-        )
-        parser.add_argument(
-            "--bg-hist",
-            help="name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional)",
-            default=None,
-            type=str,
-        )
-        parser.add_argument(
-            "--bg-scale",
-            help="relative scale of background spectrum live time to observed spectrum live time (optional)",
-            default=1.0,
-            type=float,
-        )
-
-        calgroup = parser.add_mutually_exclusive_group()
-        calgroup.add_argument(
-            "--cal-bin-centers",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin centers of the incident spectrum, if bins are unknown (tv style calibration)",
-            type=float,
-            nargs="+",
-        )
-        calgroup.add_argument(
-            "--cal-bin-edges",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin edges of the incident spectrum, if bins are unknown",
-            type=float,
-            nargs="+",
-        )
-        parser.add_argument(
-            "--rema-name",
-            help="Name of the detector response matrix in matrix file",
-            default="rema",
-            nargs=1,
-            type=str,
-        )
-        parser.add_argument(
-            "--norm-hist",
-            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
-            nargs="?",
-            default=None,
-            type=str,
-        )
-
-        parser.add_argument(
-            "matrixfile",
-            help="container file containing detector response matrix",
-            type=Path,
-        )
-        parser.add_argument(
-            "incident_spectrum",
-            help="file containing the incident spectrum",
-            type=Path,
-        )
-        parser.add_argument(
-            "observed_spectrum",
-            help="write observed (convoluted) spectrum to this path",
-            type=Path,
-        )
-        self.args = parser.parse_args(args)
 
 
 def boris2spec(
@@ -676,117 +392,42 @@ def boris2spec(
         write_hists(res, bin_edges, output_path)
 
 
-class Boris2SpecApp:
-    def __init__(self) -> None:
-        """CLI interface for boris2spec."""
-        self.parse_args(sys.argv[1:])
-        boris2spec(
-            self.args.incident_spectrum,
-            self.args.output_path,
-            self.args.plot,
-            self.args.get_mean,
-            self.args.get_median,
-            # self.args.get_mode,
-            self.args.get_variance,
-            self.args.get_std_dev,
-            self.args.get_min,
-            self.args.get_max,
-            self.args.get_hdi,
-            self.args.hdi_prob,
-        )
+def make_matrix(
+    dat_file_path: Path,
+    output_path: Path,
+    dets: Optional[List[str]] = None,
+    max_energy: Optional[float] = None,
+    scale_hist_axis: float = 1e3,
+    sim_dir: Optional[Path] = None,
+) -> None:
+    """
+    Makes and writes matrix by reading dat file and simulation histograms.
 
-    def parse_args(self, args: List[str]):
-        """Parse CLI arguments."""
-        parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "--plot",
-            help="Display a matplotlib plot of the queried spectra",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-mean",
-            help="Get the mean for each bin",
-            action="store_true",
-        )
-        # parser.add_argument(
-        #    "--get-mode",
-        #    help="Get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
-        #    action="store_true",
-        # )
-        parser.add_argument(
-            "--get-median",
-            help="Get the median for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-variance",
-            help="Get the variance for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-std-dev",
-            help="Get the standard deviation for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-min",
-            help="Get the minimum for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-max",
-            help="Get the maximum for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-hdi",
-            help="Get the highest density interval for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--hdi-prob",
-            metavar="PROB",
-            help="HDI prob for which interval will be computed",
-            default=np.math.erf(np.sqrt(0.5)),
-        )
-
-        parser.add_argument(
-            "incident_spectrum",
-            help="boris output for incident spectrum",
-            type=Path,
-        )
-        parser.add_argument(
-            "output_path",
-            help="Write resulting spectra to this file (multiple files are created for each exported spectrum if txt format is used)",
-            type=Path,
-            nargs="?",
-        )
-        self.args = parser.parse_args(args)
-        if not self.args.plot and self.args.output_path is None:
-            parser.error("Please specify output_path and/or use --plot option")
-
-        if not (
-            self.args.get_mean
-            or self.args.get_median
-            # or self.args.get_mode
-            or self.args.get_variance
-            or self.args.get_std_dev
-            or self.args.get_hdi
-        ):
-            parser.error("Nothing to do, please give some --get-* options")
-
-
-def init():
-    if __name__ == "__main__":
-        setup_logging()
-        if Path(sys.argv[0]).stem == "sirob":
-            SirobApp()
-        elif Path(sys.argv[0]).stem == "boris2spec":
-            Boris2SpecApp()
-        if Path(sys.argv[0]).stem == "boris":
-            BorisApp()
-
-
-init()
+    :param dat_file_path: Path to datfile.
+    :param output_path: Path of created detector response matrix file.
+    :param dets: List of detectors to create detector response matrices for.
+        If ``None``, detector response matrices are created for all
+        found detectors.
+    :param max_energy:
+        Limit maximum energy of detector response matrix. If ``None``,
+        use the maximum simulated energy.
+    :param scale_hist_axis:
+        Scale energy axis of simulations with this parameter, for example,
+        to convert MeV to keV.
+    :param sim_dir:
+        Root of simulation directory. Paths in ``dat_file_path`` are
+        given relative to this directory. If ``None``, it is assumed
+        that they are given relative to ``dat_file_path``.
+    """
+    simulations = read_dat_file(dat_file_path, sim_dir)
+    dets = dets or get_keys_in_container(simulations[0].path)
+    remas = {
+        det: create_matrix(simulations, det, max_energy, scale_hist_axis)
+        for det in dets or [None]
+    }
+    idx = next(iter(remas))
+    write_hists(
+        {det: rema[0] for det, rema in remas.items()},
+        [remas[idx][1], remas[idx][2]],
+        output_path,
+    )

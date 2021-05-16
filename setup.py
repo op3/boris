@@ -45,7 +45,7 @@ Topic :: Scientific/Engineering :: Physics
 
 setup(
     name="boris",
-    version="0.2.0",
+    version="0.3.0",
     description="Bayesian deconvolution of nuclear spectra",
     url="https://github.com/op3/boris",
     author="Oliver Papst",
@@ -55,7 +55,7 @@ setup(
     license="GPL",
     classifiers=CLASSIFIERS.strip().split("\n"),
     keywords=KEYWORDS.strip().replace("\n", " "),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
         "numpy",
         "pymc3",
@@ -64,9 +64,10 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "boris=boris.app:BorisApp",
-            "sirob=boris.app:SirobApp",
+            "boris=boris.main:BorisApp",
             "boris2spec=boris.app:Boris2SpecApp",
+            "makematrix=boris.makematrix:MakeMatrixApp",
+            "sirob=boris.sirob:SirobApp",
         ]
     },
     packages=[

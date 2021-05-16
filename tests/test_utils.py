@@ -19,14 +19,19 @@
 
 import pytest
 
-from tests.helpers.utils import hide_module
+from pathlib import Path
+
+from tests.helpers.utils import create_simulations
 
 from importlib.util import find_spec
 
 import numpy as np
 
 from boris.utils import (
+    SimInfo,
+    SimSpec,
     _bin_edges_dict,
+    create_matrix,
     get_bin_edges,
     get_filetype,
     get_keys_in_container,
@@ -34,8 +39,9 @@ from boris.utils import (
     get_obj_by_name,
     get_rema,
     hdi,
-    load_rema,
+    interpolate_grid,
     numpy_to_root_hist,
+    read_dat_file,
     read_pos_int_spectrum,
     read_rebin_spectrum,
     read_spectrum,
@@ -648,3 +654,107 @@ def test_get_rema_unequal_binning(tmp_path):
 
     with pytest.raises(ValueError):
         get_rema(path, "rema", 2, 0, 10, "n_simulated_particles")
+
+
+def test_SimInfo_from_line():
+    res = SimInfo.from_dat_file_line("test.root: 1332.0 1000", Path("/"))
+
+    assert res.path == Path("/test.root")
+    assert res.energy == 1332.0
+    assert res.nevents == 1000
+
+
+def test_read_datfile(tmp_path):
+    energies = np.linspace(0, 1000, 101)
+    with open(tmp_path / "test.dat", "w") as f:
+        for i, energy in enumerate(energies):
+            nevents = 1000000 + i
+            print(f"sim_{i}.root: {energy} {nevents}", file=f)
+
+    res = read_dat_file(tmp_path / "test.dat", Path("/"))
+
+    assert len(res) == 101
+    for i, energy in enumerate(energies):
+        assert res[i].energy == energy
+        assert res[i].nevents == 1000000 + i
+        assert res[i].path == Path(f"/sim_{i}.root")
+
+
+def test_SimSpec(tmp_path):
+    hist = np.ones(10)
+    bin_edges = np.linspace(0.0, 10.0, 11)
+    path = tmp_path / "test0.txt"
+    detector = "det1"
+    write_hist(path, detector, hist, bin_edges)
+    spec = SimSpec(path, detector, 4000, 1000000, 1e3, True)
+    assert np.isclose(spec.orig_spec, hist).all()
+    assert np.isclose(spec.bin_edges, bin_edges * 1e3).all()
+    assert spec.bin_centers.shape[0] + 1 == bin_edges.shape[0]
+    assert np.isclose(spec.spec * 1000000, hist).all()
+
+    spec = SimSpec(path, detector, 4000, 1000000, 1e3, False)
+    assert np.isclose(spec.spec, hist).all()
+
+    assert spec.binning_convention() == 0.0
+
+    hist = np.ones(10001)
+    bin_edges = np.linspace(0, 10.001, 10002) - 0.0005
+    path = tmp_path / "test1.txt"
+    write_hist(path, detector, hist, bin_edges)
+    spec = SimSpec(path, detector, 4000, 1000000, 1e3, False)
+    assert np.isclose(spec.binning_convention(), 0.5)
+
+
+def test_interpolate_grid_midpoint():
+    grid = np.linspace(10, 110, 101)
+    res = interpolate_grid(grid, 50.3)
+    assert len(res) == 2
+    assert res[0][:2] == (40, 50)
+    assert np.isclose(res[0][2], 0.7)
+    assert res[1][:2] == (41, 51)
+    assert np.isclose(res[1][2], 0.3)
+
+
+def test_interpolate_grid_before():
+    grid = np.linspace(10, 110, 101)
+    res = interpolate_grid(grid, 5)
+    assert len(res) == 1
+    assert res[0] == (0, 10, 1.0)
+
+
+def test_interpolate_grid_after():
+    grid = np.linspace(10, 110, 101)
+    res = interpolate_grid(grid, 120)
+    assert len(res) == 1
+    assert res[0] == (100, 110, 1.0)
+
+
+def test_create_matrix(tmp_path):
+    simulations = create_simulations(tmp_path)
+
+    mat, bin_edges, bin_edges2 = create_matrix(
+        simulations, "det1", scale_hist_axis=1.0
+    )
+    assert (bin_edges == bin_edges2).all()
+    assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 600
+    assert np.isclose(bin_edges[0], 0.0)
+    assert np.isclose(bin_edges[-1], 600.0)
+
+    mat, bin_edges, bin_edges2 = create_matrix(
+        simulations, "det1", scale_hist_axis=1.0, max_energy=1000.0
+    )
+    assert (bin_edges == bin_edges2).all()
+    assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 1000
+
+
+def test_create_matrix_tv(tmp_path):
+    simulations = create_simulations(
+        tmp_path, detectors=["det2"], shift_axis=-0.5
+    )
+    mat, bin_edges, bin_edges2 = create_matrix(
+        simulations, "det2", scale_hist_axis=1.0
+    )
+    assert (bin_edges == bin_edges2).all()
+    assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 601
+    assert np.isclose(bin_edges[0], -0.5)
+    assert np.isclose(bin_edges[-1], 600.5)
