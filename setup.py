@@ -64,10 +64,10 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "boris=boris.main:BorisApp",
-            "boris2spec=boris.app:Boris2SpecApp",
-            "makematrix=boris.makematrix:MakeMatrixApp",
-            "sirob=boris.sirob:SirobApp",
+            "boris=boris.boris_app:BorisApp",
+            "boris2spec=boris.boris2spec_app:Boris2SpecApp",
+            "makematrix=boris.makematrix_app:MakeMatrixApp",
+            "sirob=boris.sirob_app:SirobApp",
         ]
     },
     packages=[

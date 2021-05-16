@@ -22,16 +22,12 @@ import pytest
 import sys
 from unittest import mock
 
-import boris.makematrix_app
-from boris.makematrix_app import (
-    MakeMatrixApp,
-    init,
-)
+from boris.makematrix_app import MakeMatrixApp, init
 
 from tests.helpers.utils import create_simulations
 
 
-def test_makematrix_call(tmp_path):
+def test_MakeMatrixApp(tmp_path):
     simulations = create_simulations(tmp_path)
 
     path = tmp_path / "sim.dat"

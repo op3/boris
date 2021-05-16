@@ -25,7 +25,6 @@ from unittest import mock
 import numpy as np
 
 from boris.utils import write_hist
-import boris.boris_app
 from boris.boris_app import BorisApp, init
 
 
