@@ -31,7 +31,7 @@ def test_MakeMatrixApp(tmp_path):
     path = tmp_path / "sim.dat"
     with open(path, "w") as f:
         for sim in simulations:
-            print(sim.to_dat_file_line(), file=f, end="\n")
+            print(str(sim), file=f, end="\n")
 
     sys.argv = [
         "boris",

@@ -199,7 +199,7 @@ def test_make_matrix(tmp_path, filename):
     path = tmp_path / "sim.dat"
     with open(path, "w") as f:
         for sim in simulations:
-            print(sim.to_dat_file_line(), file=f, end="\n")
+            print(str(sim), file=f, end="\n")
 
     make_matrix(
         path,

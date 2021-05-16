@@ -708,7 +708,8 @@ class SimInfo:
         path, energy, nevents = line.split(" ")
         return cls(sim_root / path.rstrip(":"), float(energy), int(nevents))
 
-    def to_dat_file_line(self):
+    def __str__(self):
+        """Convert to dat_file line."""
         return f"{self.path}: {self.energy} {self.nevents}"
 
 

@@ -1,6 +1,6 @@
 # boris
 
-[![Build Status](https://travis-ci.org/op3/boris.svg?branch=master)](https://travis-ci.org/op3/boris)
+[![Build Status](https://travis-ci.com/op3/boris.svg?branch=master)](https://travis-ci.com/op3/boris)
 [![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
 [![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
@@ -14,7 +14,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Requirements
 
-* Python>=3.7
+* Python>=3.8
 * [numpy](https://numpy.org/)
 * [PyMC3](https://docs.pymc.io/)
 * [uproot3](https://github.com/scikit-hep/uproot3) (*optional, for reading and writing root files*)

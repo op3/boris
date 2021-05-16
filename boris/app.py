@@ -93,8 +93,7 @@ def boris(
     **kwargs: Any,
 ) -> None:
     r"""
-    Loads response matrix and spectrum, samples MCMC chain,
-    writes resulting trace to file.
+    Loads response matrix and spectrum, samples MCMC chain, writes output.
 
     :param matrix: Path of container file containing the response matrix.
     :param observed_spectrum:

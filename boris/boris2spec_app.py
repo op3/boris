@@ -137,7 +137,7 @@ class Boris2SpecApp:
 
 
 def init():
-    """Run app if executed directly"""
+    """Run app if executed directly."""
     if __name__ == "__main__":
         Boris2SpecApp()
 

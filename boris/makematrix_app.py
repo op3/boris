@@ -45,7 +45,7 @@ class MakeMatrixApp:
         )
 
     def parse_args(self, args: List[str]):
-        """Parse makematrix command line"""
+        """Parse makematrix command line."""
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "--sim-dir",
@@ -86,7 +86,7 @@ class MakeMatrixApp:
 
 
 def init():
-    """Run app if executed directly"""
+    """Run app if executed directly."""
     if __name__ == "__main__":
         MakeMatrixApp()
 

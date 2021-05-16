@@ -36,8 +36,7 @@ def deconvolute(
     **kwargs,
 ) -> pm.backends.base.MultiTrace:
     """
-    Generates a MCMC chain, deconvolutes spectrum using given
-    response matrix.
+    Generates a MCMC chain, deconvolutes spectrum using response matrix.
 
     :param rema: Response matrix of the detector
     :param spectrum: Observed spectrum

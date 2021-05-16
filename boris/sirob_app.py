@@ -153,7 +153,7 @@ class SirobApp:
 
 
 def init():
-    """Run app if executed directly"""
+    """Run app if executed directly."""
     if __name__ == "__main__":
         SirobApp()
 
