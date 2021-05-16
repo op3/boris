@@ -29,14 +29,14 @@ from typing import List
 
 import numpy as np
 
-from boris.app import do_step, boris
-
 
 class BorisApp:
     """CLI interface for boris"""
 
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
+        from boris.app import do_step, setup_logging, boris
+        setup_logging()
         if self.args.seed:
             with do_step(
                 f"Setting numpy seed to {self.args.seed}", simple=True

@@ -26,7 +26,6 @@ from typing import Any, Callable, Generator, List, Mapping, Optional
 
 import numpy as np
 
-from boris.core import deconvolute
 from boris.utils import (
     create_matrix,
     get_keys_in_container,
@@ -89,7 +88,7 @@ def boris(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
-    deconvolute: Callable[..., Mapping] = deconvolute,
+    deconvolute: Optional[Callable[..., Mapping]] = None,
     **kwargs: Any,
 ) -> None:
     r"""
@@ -133,7 +132,7 @@ def boris(
     :param norm_hist:
         Divide detector response matrix by this histogram
         (e. g., to correct for number of simulated particles).
-    :param deconvolute: Function used for deconvolution.
+    :param deconvolute: Alternate function used for deconvolution.
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
@@ -169,6 +168,8 @@ def boris(
             )
 
     with do_step("🎲 Sampling from posterior distribution"):
+        if deconvolute is None:
+            from boris.core import deconvolute
         trace = deconvolute(
             rema,
             spectrum,

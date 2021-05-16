@@ -27,14 +27,14 @@ import sys
 from pathlib import Path
 from typing import List
 
-from boris.app import make_matrix
-
 
 class MakeMatrixApp:
     """CLI interface for make_matrix."""
 
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
+        from boris.app import setup_logging, make_matrix
+        setup_logging()
         make_matrix(
             self.args.datfile,
             self.args.output_path,
