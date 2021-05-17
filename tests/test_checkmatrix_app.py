@@ -42,7 +42,7 @@ def test_CheckMatrixApp_plot(mock_plt, tmp_path):
         str(tmp_path / "rema.npz"),
     ]
     CheckMatrixApp()
-    assert mock_plt.imshow.called
+    assert mock_plt.pcolormesh.called
     assert mock_plt.show.called
 
 

@@ -472,8 +472,11 @@ def check_matrix(
             matrix, rema_name, binning_factor, left, right, norm_hist
         )
 
-    plt.imshow(
-        rema, norm=LogNorm(vmin=rema[rema > 1e-20].min(), vmax=rema.max())
+    plt.pcolormesh(
+        rema_bin_edges,
+        rema_bin_edges,
+        rema,
+        norm=LogNorm(vmin=rema[rema > 1e-20].min(), vmax=rema.max()),
     )
     plt.title(rema_name)
     plt.xlabel("Observed energy")
