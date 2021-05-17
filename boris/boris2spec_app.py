@@ -51,6 +51,7 @@ class Boris2SpecApp:
             self.args.get_max,
             self.args.get_hdi,
             self.args.hdi_prob,
+            self.args.force_overwrite,
         )
 
     def parse_args(self, args: List[str]):
@@ -109,6 +110,11 @@ class Boris2SpecApp:
             help="HDI prob for which interval will be computed",
             default=np.math.erf(np.sqrt(0.5)),
         )
+        parser.add_argument(
+            "--force-overwrite",
+            help="Overwrite existing files without warning",
+            action="store_true",
+        )
 
         parser.add_argument(
             "incident_spectrum",
@@ -121,6 +127,7 @@ class Boris2SpecApp:
             type=Path,
             nargs="?",
         )
+
         self.args = parser.parse_args(args)
         if not self.args.plot and self.args.output_path is None:
             parser.error("Please specify output_path and/or use --plot option")

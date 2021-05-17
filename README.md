@@ -30,10 +30,10 @@ The `boris` command is provided to construct the MCMC chain:
 $ boris --help
 usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
-             [--bg-scale BG_SCALE] [--rema-name REMA_NAME]
+             [--bg-scale BG_SCALE] [--rema-name [REMA_NAME]]
              [--norm-hist [NORM_HIST]] [--cal-bin-centers C0 [C1 ...] |
              --cal-bin-edges C0 [C1 ...]] [-s SEED] [-c CORES] [--thin THIN]
-             [--tune TUNE] [--burn BURN] [-n NDRAWS]
+             [--tune TUNE] [--burn BURN] [-n NDRAWS] [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
 Deconvolute observed_spectrum using using the supplied detector response
@@ -63,7 +63,7 @@ optional arguments:
                         --bg-spectrum, if specified (optional) (default: None)
   --bg-scale BG_SCALE   relative scale of background spectrum live time to
                         observed spectrum live time (optional) (default: 1.0)
-  --rema-name REMA_NAME
+  --rema-name [REMA_NAME]
                         name of the detector response matrix in matrix file
                         (default: rema)
   --norm-hist [NORM_HIST]
@@ -77,6 +77,7 @@ optional arguments:
   --cal-bin-edges C0 [C1 ...]
                         energy calibration for the bin edges of the observed
                         spectrum, if bins are unknown (default: None)
+  --force-overwrite     Overwrite existing files without warning
 
 advanced arguments:
   -s SEED, --seed SEED  set random seed
@@ -99,7 +100,7 @@ usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
              --cal-bin-edges C0 [C1 ...]] [--rema-name REMA_NAME]
-             [--norm-hist [NORM_HIST]]
+             [--norm-hist [NORM_HIST]] [--force-overwrite]
              matrixfile incident_spectrum observed_spectrum
 
 positional arguments:
@@ -140,6 +141,8 @@ optional arguments:
                         Divide detector response matrix by this histogram (e.
                         g., to correct for number of simulated particles)
                         (default: None)
+  --force-overwrite     Overwrite existing files without warning (default:
+                        False)
 ```
 
 ### Input and output data
@@ -151,7 +154,7 @@ This file can be created by the `makematrix` program:
 $ makematrix --help
 usage: makematrix [-h] [--sim-dir SIM_DIR] [--scale-hist-axis SCALE_HIST_AXIS]
                   [--detector [DETECTOR [DETECTOR ...]]]
-                  [--max-energy [MAX_ENERGY]]
+                  [--max-energy [MAX_ENERGY]] [--force-overwrite]
                   datfile output_path
 
 positional arguments:
@@ -172,6 +175,7 @@ optional arguments:
                         (default: All available histograms)
   --max-energy [MAX_ENERGY]
                         Maximum energy of created response matrix
+  --force-overwrite     Overwrite existing files without warning
 ```
 
 The legacy format of [Horst](https://github.com/uga-uga/Horst)
@@ -207,7 +211,7 @@ the `boris2spec` tool is provided:
 $ boris2spec --help
 usage: boris2spec [-h] [--plot] [--get-mean] [--get-median] [--get-variance]
                   [--get-std-dev] [--get-min] [--get-max] [--get-hdi]
-                  [--hdi-prob PROB]
+                  [--hdi-prob PROB] [--force-overwrite]
                   incident_spectrum [output_path]
 
 positional arguments:
@@ -230,6 +234,7 @@ optional arguments:
                      False)
   --hdi-prob PROB    HDI prob for which interval will be computed (default:
                      0.682689492137086)
+  --force-overwrite  Overwrite existing files without warning (default: False)
 ```
 
 It can be used to export mean, median, variance, standard deviation and highest density interval (lower and upper limit).
@@ -269,7 +274,6 @@ optional arguments:
                         (optional) (default: None)
 ```
 
-
 ## License
 
 Copyright © 2020–2021
@@ -280,6 +284,7 @@ This code is distributed under the terms of the GNU General Public License, vers
 
 ## Acknowledgements
 
-We thank U. Friman-Gayer for valuable discussions.
+We thank U. Friman-Gayer for valuable discussions
+and J. Kleemann for testing.
 This work has been funded by the State of Hesse under the grant “Nuclear Photonics” within the LOEWE program.
 O. Papst acknowledges support by the Helmholtz Graduate School for Hadron and Ion Research of the Helmholtz Association.

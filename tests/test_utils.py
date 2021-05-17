@@ -140,6 +140,27 @@ def test_write_hist_exists(tmp_path):
         write_hist(tmp_path, "test", hist, bin_edges)
 
 
+def test_write_hists_exists(tmp_path):
+    hist = np.random.uniform(size=100)
+    bin_edges = np.linspace(0, 100, 101)
+    with pytest.raises(Exception):
+        write_hists({"test": hist}, bin_edges, tmp_path)
+
+
+def test_write_hist_mkdir(tmp_path):
+    hist = np.random.uniform(size=100)
+    bin_edges = np.linspace(0, 100, 101)
+    write_hist(tmp_path / "dir" / "test.npz", "test", hist, bin_edges)
+    assert (tmp_path / "dir" / "test.npz").exists()
+
+
+def test_write_hists_mkdir(tmp_path):
+    hist = np.random.uniform(size=100)
+    bin_edges = np.linspace(0, 100, 101)
+    write_hists({"test": hist}, bin_edges, tmp_path / "dir" / "test.npz")
+    assert (tmp_path / "dir" / "test.npz").exists()
+
+
 def test_write_hist_txt_1D(tmp_path):
     hist = np.random.uniform(size=(10, 10))
     bin_edges = np.linspace(0, 10, 11)

@@ -43,6 +43,7 @@ class MakeMatrixApp:
             self.args.max_energy,
             self.args.scale_hist_axis,
             self.args.sim_dir,
+            self.args.force_overwrite,
         )
 
     def parse_args(self, args: List[str]):
@@ -70,6 +71,12 @@ class MakeMatrixApp:
             help="Maximum energy of created response matrix",
             type=float,
         )
+        parser.add_argument(
+            "--force-overwrite",
+            help="Overwrite existing files without warning",
+            action="store_true",
+        )
+
         parser.add_argument(
             "datfile",
             help=(

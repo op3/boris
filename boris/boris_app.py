@@ -58,6 +58,7 @@ class BorisApp:
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
             self.args.norm_hist,
+            self.args.force_overwrite,
             ndraws=self.args.ndraws,
             tune=self.args.tune,
             thin=self.args.thin,
@@ -180,6 +181,11 @@ class BorisApp:
             help="number of samples to draw per core (default: %(default)s)",
             default=2000,
             type=int,
+        )
+        parser.add_argument(
+            "--force-overwrite",
+            help="Overwrite existing files without warning",
+            action="store_true",
         )
 
         parser.add_argument(

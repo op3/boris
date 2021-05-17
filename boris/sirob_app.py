@@ -51,6 +51,7 @@ class SirobApp:
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
             self.args.norm_hist,
+            self.args.force_overwrite,
         )
 
     def parse_args(self, args: List[str]):
@@ -133,6 +134,11 @@ class SirobApp:
             nargs="?",
             default=None,
             type=str,
+        )
+        parser.add_argument(
+            "--force-overwrite",
+            help="Overwrite existing files without warning",
+            action="store_true",
         )
 
         parser.add_argument(

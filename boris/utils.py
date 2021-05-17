@@ -99,6 +99,7 @@ def write_hist(
     name: str,
     hist: np.ndarray,
     bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
+    force_overwrite: bool = False,
 ) -> None:
     """
     Writes single histogram to file.
@@ -107,10 +108,13 @@ def write_hist(
     :param name: Name of histogram in container file.
     :param hist: Histogram.
     :param bin_edges: Bin edges.
+    :param force_overwrite: Overwrite output_path if it exists.
     """
     # TODO: Remove, only use write_hists()
-    if histfile.exists():
+    if not force_overwrite and histfile.exists():
         raise Exception(f"Error writing {histfile}, already exists.")
+    if not histfile.parent.exists():
+        histfile.parent.mkdir(parents=True)
     if histfile.suffix == ".npz":
         np.savez_compressed(
             histfile,
@@ -158,6 +162,7 @@ def write_hists(
     hists: Dict[str, np.ndarray],
     bin_edges: Union[np.ndarray, List[np.ndarray]],
     output_path: Path,
+    force_overwrite: bool = False,
 ) -> None:
     """
     Writes multiple histograms to file.
@@ -165,7 +170,12 @@ def write_hists(
     :param hists: Dictionary of histograms.
     :param bin_edges: Bin edges, assumed to be equal for all histograms.
     :param output_path: Path of created container file.
+    :param force_overwrite: Overwrite output_path if it exists.
     """
+    if not force_overwrite and output_path.exists():
+        raise Exception(f"Error writing {output_path}, already exists.")
+    if not output_path.parent.exists():
+        output_path.parent.mkdir(parents=True)
     if output_path.suffix == ".txt":
         for hist in hists.values():
             if hist.ndim != 1:

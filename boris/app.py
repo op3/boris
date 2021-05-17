@@ -99,6 +99,7 @@ def boris(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
+    force_overwrite: bool = False,
     deconvolute: Optional[Callable[..., Mapping]] = None,
     **kwargs: Any,
 ) -> None:
@@ -143,11 +144,13 @@ def boris(
     :param norm_hist:
         Divide detector response matrix by this histogram
         (e. g., to correct for number of simulated particles).
+    :param force_overwrite: Overwrite output_path if it exists.
     :param deconvolute: Alternate function used for deconvolution.
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
-    check_if_exists(incident_spectrum)
+    if not force_overwrite:
+        check_if_exists(incident_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
@@ -192,7 +195,11 @@ def boris(
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
         write_hist(
-            incident_spectrum, "incident", trace["incident"], rema_bin_edges
+            incident_spectrum,
+            "incident",
+            trace["incident"],
+            rema_bin_edges,
+            force_overwrite,
         )
 
 
@@ -211,6 +218,7 @@ def sirob(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
+    force_overwrite: bool = False,
 ) -> None:
     """
     Performs convolution of incident spectrum with detector response matrix
@@ -253,10 +261,12 @@ def sirob(
         spectrum and background spectrum. (root-style calibration)
     :param norm_hist: Divide detector response matrix by this histogram
         (e. g., to correct for number of simulated particles).
+    :param force_overwrite: Overwrite output_path if it exists.
     :param deconvolute: Function used for deconvolution.
     :param kwargs: Passed to ``deconvolute`` function.
     """
-    check_if_exists(observed_spectrum)
+    if not force_overwrite:
+        check_if_exists(observed_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
@@ -294,7 +304,13 @@ def sirob(
             observed += background_scale * background
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
-        write_hist(observed_spectrum, "observed", observed, spectrum_bin_edges)
+        write_hist(
+            observed_spectrum,
+            "observed",
+            observed,
+            spectrum_bin_edges,
+            force_overwrite,
+        )
 
 
 def boris2spec(
@@ -310,6 +326,7 @@ def boris2spec(
     get_max: bool = False,
     get_hdi: bool = False,
     hdi_prob: float = np.math.erf(np.sqrt(0.5)),
+    force_overwrite: bool = False,
 ) -> None:
     """
     Creates and/or plots spectra from boris trace file.
@@ -334,8 +351,9 @@ def boris2spec(
     :param hdi_prob:
         Probability for which the highest density interval will be computed.
         Defaults to 1σ.
+    :param force_overwrite: Overwrite output_path if it exists.
     """
-    if output_path:
+    if output_path and not force_overwrite:
         check_if_exists(output_path)
     spec, bin_edges = read_spectrum(incident_spectrum, "incident")
     bin_edges = bin_edges[-1]
@@ -401,7 +419,7 @@ def boris2spec(
         plt.show()
 
     if output_path:
-        write_hists(res, bin_edges, output_path)
+        write_hists(res, bin_edges, output_path, force_overwrite)
 
 
 def make_matrix(
@@ -411,6 +429,7 @@ def make_matrix(
     max_energy: Optional[float] = None,
     scale_hist_axis: float = 1e3,
     sim_dir: Optional[Path] = None,
+    force_overwrite: bool = False,
 ) -> None:
     """
     Makes and writes matrix by reading dat file and simulation histograms.
@@ -430,8 +449,10 @@ def make_matrix(
         Root of simulation directory. Paths in ``dat_file_path`` are
         given relative to this directory. If ``None``, it is assumed
         that they are given relative to ``dat_file_path``.
+    :param force_overwrite: Overwrite output_path if it exists.
     """
-    check_if_exists(output_path)
+    if not force_overwrite:
+        check_if_exists(output_path)
     with do_step(f"Reading simulation dat file {dat_file_path}"):
         simulations = read_dat_file(dat_file_path, sim_dir)
         dets = dets or get_keys_in_container(simulations[0].path)
@@ -449,6 +470,7 @@ def make_matrix(
             {det: rema[0] for det, rema in remas.items()},
             [remas[idx][1], remas[idx][2]],
             output_path,
+            force_overwrite,
         )
 
 
