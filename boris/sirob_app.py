@@ -27,12 +27,14 @@ import sys
 from pathlib import Path
 from typing import List
 
+
 class SirobApp:
     """CLI interface for sirob."""
 
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, sirob
+
         setup_logging()
         sirob(
             self.args.matrixfile,

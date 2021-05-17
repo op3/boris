@@ -28,17 +28,20 @@ The `boris` command is provided to construct the MCMC chain:
 
 ```bash
 $ boris --help
-usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-s SEED]
-             [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN] [-n NDRAWS]
-             [-H HIST] [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
-             [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
-             --cal-bin-edges C0 [C1 ...]] [--rema-name REMA_NAME]
-             [--norm-hist [NORM_HIST]]
+usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
+             [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
+             [--bg-scale BG_SCALE] [--rema-name REMA_NAME]
+             [--norm-hist [NORM_HIST]] [--cal-bin-centers C0 [C1 ...] |
+             --cal-bin-edges C0 [C1 ...]] [-s SEED] [-c CORES] [--thin THIN]
+             [--tune TUNE] [--burn BURN] [-n NDRAWS]
              matrixfile observed_spectrum incident_spectrum
+
+Deconvolute observed_spectrum using using the supplied detector response
+matrix.
 
 positional arguments:
   matrixfile            container file containing detector response matrix
-  observed_spectrum     txt file containing the observed spectrum
+  observed_spectrum     file containing the observed spectrum
   incident_spectrum     write trace of incident spectrum to this path
 
 optional arguments:
@@ -47,20 +50,10 @@ optional arguments:
                         (default: 0)
   -r RIGHT, --right RIGHT
                         maximum upper edge of last bin of deconvoluted
-                        spectrum (default: None)
+                        spectrum (default: maximum energy of simulation)
   -b BINNING_FACTOR, --binning-factor BINNING_FACTOR
                         rebinning factor, group this many bins together
                         (default: 10)
-  -s SEED, --seed SEED  set random seed (default: None)
-  -c CORES, --cores CORES
-                        number of cores to utilize (default: 1)
-  --thin THIN           thin the resulting trace by a factor (default: 1)
-  --tune TUNE           number of initial steps used to tune the model
-                        (default: 1000)
-  --burn BURN           number of initial steps to discard (burn-in phase)
-                        (default: 1000)
-  -n NDRAWS, --ndraws NDRAWS
-                        number of samples to draw per core (default: 2000)
   -H HIST, --hist HIST  name of histogram in observed_spectrum to read
                         (optional) (default: None)
   --bg-spectrum BG_SPECTRUM
@@ -70,20 +63,32 @@ optional arguments:
                         --bg-spectrum, if specified (optional) (default: None)
   --bg-scale BG_SCALE   relative scale of background spectrum live time to
                         observed spectrum live time (optional) (default: 1.0)
-  --cal-bin-centers C0 [C1 ...]
-                        Provide an energy calibration for the bin centers of
-                        the observed spectrum, if bins are unknown (tv style
-                        calibration) (default: None)
-  --cal-bin-edges C0 [C1 ...]
-                        Provide an energy calibration for the bin edges of the
-                        observed spectrum, if bins are unknown (default: None)
   --rema-name REMA_NAME
-                        Name of the detector response matrix in matrix file
+                        name of the detector response matrix in matrix file
                         (default: rema)
   --norm-hist [NORM_HIST]
-                        Divide detector response matrix by this histogram (e.
+                        divide detector response matrix by this histogram (e.
                         g., to correct for number of simulated particles)
+                        (optional) (default: None)
+  --cal-bin-centers C0 [C1 ...]
+                        energy calibration for the bin centers of the observed
+                        spectrum, if bins are unknown (tv style calibration)
                         (default: None)
+  --cal-bin-edges C0 [C1 ...]
+                        energy calibration for the bin edges of the observed
+                        spectrum, if bins are unknown (default: None)
+
+advanced arguments:
+  -s SEED, --seed SEED  set random seed
+  -c CORES, --cores CORES
+                        number of cores to utilize (default: 1)
+  --thin THIN           thin the resulting trace by a factor (default: 1)
+  --tune TUNE           number of initial steps used to tune the model
+                        (default: 1000)
+  --burn BURN           number of initial steps to discard (burn-in phase)
+                        (default: 1000)
+  -n NDRAWS, --ndraws NDRAWS
+                        number of samples to draw per core (default: 2000)
 ```
 
 A simple convolution of an incident spectrum using the response matrix can be performed using the `sirob` program:

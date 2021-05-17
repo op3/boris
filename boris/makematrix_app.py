@@ -34,6 +34,7 @@ class MakeMatrixApp:
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, make_matrix
+
         setup_logging()
         make_matrix(
             self.args.datfile,

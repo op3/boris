@@ -36,6 +36,7 @@ class BorisApp:
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
         from boris.app import do_step, setup_logging, boris
+
         setup_logging()
         if self.args.seed:
             with do_step(
@@ -67,116 +68,118 @@ class BorisApp:
     def parse_args(self, args: List[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            description="Deconvolute observed_spectrum using using the supplied detector response matrix."
         )
         parser.add_argument(
             "-l",
             "--left",
-            help="lower edge of first bin of deconvoluted spectrum",
+            help="lower edge of first bin of deconvoluted spectrum (default: %(default)s)",
             type=int,
             default=0,
         )
         parser.add_argument(
             "-r",
             "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum",
+            help="maximum upper edge of last bin of deconvoluted spectrum (default: maximum energy of simulation)",
             type=int,
             default=None,
         )
         parser.add_argument(
             "-b",
             "--binning-factor",
-            help="rebinning factor, group this many bins together",
+            help="rebinning factor, group this many bins together (default: %(default)s)",
             type=int,
             default=10,
-        )
-        parser.add_argument("-s", "--seed", help="set random seed")
-        parser.add_argument(
-            "-c",
-            "--cores",
-            help="number of cores to utilize",
-            default=1,
-            type=int,
-        )
-        parser.add_argument(
-            "--thin",
-            help="thin the resulting trace by a factor",
-            default=1,
-            type=int,
-        )
-        parser.add_argument(
-            "--tune",
-            help="number of initial steps used to tune the model",
-            default=1000,
-            type=int,
-        )
-        parser.add_argument(
-            "--burn",
-            help="number of initial steps to discard (burn-in phase)",
-            default=1000,
-            type=int,
-        )
-        parser.add_argument(
-            "-n",
-            "--ndraws",
-            help="number of samples to draw per core",
-            default=2000,
-            type=int,
         )
         parser.add_argument(
             "-H",
             "--hist",
-            help="name of histogram in observed_spectrum to read (optional)",
+            help="name of histogram in observed_spectrum to read (optional) (default: %(default)s)",
             default=None,
             type=str,
         )
         parser.add_argument(
             "--bg-spectrum",
-            help="path to observed background spectrum (optional)",
+            help="path to observed background spectrum (optional) (default: %(default)s)",
             default=None,
             type=Path,
         )
         parser.add_argument(
             "--bg-hist",
-            help="name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional)",
+            help="name of background histogram in observed_spectrum or --bg-spectrum, if specified (optional)  (default: %(default)s)",
             default=None,
             type=str,
         )
         parser.add_argument(
             "--bg-scale",
-            help="relative scale of background spectrum live time to observed spectrum live time (optional)",
+            help="relative scale of background spectrum live time to observed spectrum live time (optional)  (default: %(default)s)",
             default=1.0,
             type=float,
         )
-
-        calgroup = parser.add_mutually_exclusive_group()
-        calgroup.add_argument(
-            "--cal-bin-centers",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin centers of the observed spectrum, if bins are unknown (tv style calibration)",
-            type=float,
-            nargs="+",
-        )
-        calgroup.add_argument(
-            "--cal-bin-edges",
-            metavar=("C0", "C1"),
-            help="Provide an energy calibration for the bin edges of the observed spectrum, if bins are unknown",
-            type=float,
-            nargs="+",
-        )
         parser.add_argument(
             "--rema-name",
-            help="Name of the detector response matrix in matrix file",
+            help="name of the detector response matrix in matrix file  (default: %(default)s)",
             default="rema",
             nargs=1,
             type=str,
         )
         parser.add_argument(
             "--norm-hist",
-            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
+            help="divide detector response matrix by this histogram (e. g., to correct for number of simulated particles) (optional) (default: %(default)s)",
             nargs="?",
             default=None,
             type=str,
+        )
+
+        calgroup = parser.add_mutually_exclusive_group()
+        calgroup.add_argument(
+            "--cal-bin-centers",
+            metavar=("C0", "C1"),
+            help="energy calibration for the bin centers of the observed spectrum, if bins are unknown (tv style calibration)  (default: %(default)s)",
+            type=float,
+            nargs="+",
+        )
+        calgroup.add_argument(
+            "--cal-bin-edges",
+            metavar=("C0", "C1"),
+            help="energy calibration for the bin edges of the observed spectrum, if bins are unknown  (default: %(default)s)",
+            type=float,
+            nargs="+",
+        )
+
+        advanced = parser.add_argument_group("advanced arguments")
+        advanced.add_argument("-s", "--seed", help="set random seed")
+        advanced.add_argument(
+            "-c",
+            "--cores",
+            help="number of cores to utilize (default: %(default)s)",
+            default=1,
+            type=int,
+        )
+        advanced.add_argument(
+            "--thin",
+            help="thin the resulting trace by a factor (default: %(default)s)",
+            default=1,
+            type=int,
+        )
+        advanced.add_argument(
+            "--tune",
+            help="number of initial steps used to tune the model (default: %(default)s)",
+            default=1000,
+            type=int,
+        )
+        advanced.add_argument(
+            "--burn",
+            help="number of initial steps to discard (burn-in phase) (default: %(default)s)",
+            default=1000,
+            type=int,
+        )
+        advanced.add_argument(
+            "-n",
+            "--ndraws",
+            help="number of samples to draw per core (default: %(default)s)",
+            default=2000,
+            type=int,
         )
 
         parser.add_argument(
@@ -186,7 +189,7 @@ class BorisApp:
         )
         parser.add_argument(
             "observed_spectrum",
-            help="txt file containing the observed spectrum",
+            help="file containing the observed spectrum",
             type=Path,
         )
         parser.add_argument(

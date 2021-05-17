@@ -30,13 +30,13 @@ from typing import List
 import numpy as np
 
 
-
 class Boris2SpecApp:
     """CLI interface for boris2spec."""
 
     def __init__(self) -> None:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, boris2spec
+
         setup_logging()
         boris2spec(
             self.args.incident_spectrum,
