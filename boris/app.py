@@ -416,15 +416,21 @@ def make_matrix(
         given relative to this directory. If ``None``, it is assumed
         that they are given relative to ``dat_file_path``.
     """
-    simulations = read_dat_file(dat_file_path, sim_dir)
-    dets = dets or get_keys_in_container(simulations[0].path)
-    remas = {
-        det: create_matrix(simulations, det, max_energy, scale_hist_axis)
-        for det in dets or [None]
-    }
-    idx = next(iter(remas))
-    write_hists(
-        {det: rema[0] for det, rema in remas.items()},
-        [remas[idx][1], remas[idx][2]],
-        output_path,
-    )
+    with do_step(f"Reading simulation dat file {dat_file_path}"):
+        simulations = read_dat_file(dat_file_path, sim_dir)
+        dets = dets or get_keys_in_container(simulations[0].path)
+
+    remas = dict()
+    for det in dets or [None]:
+        with do_step(f"Creating matrix for detector {det}"):
+            remas[det] = create_matrix(
+                simulations, det, max_energy, scale_hist_axis
+            )
+
+    with do_step(f"Writing created matrices to {output_path}"):
+        idx = next(iter(remas))
+        write_hists(
+            {det: rema[0] for det, rema in remas.items()},
+            [remas[idx][1], remas[idx][2]],
+            output_path,
+        )

@@ -739,6 +739,7 @@ def test_create_matrix(tmp_path):
     )
     assert (bin_edges == bin_edges2).all()
     assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 1000
+    assert np.isclose(mat.diagonal(), np.ones(1000) * 0.05).all()
 
 
 def test_create_matrix_tv(tmp_path):

@@ -743,7 +743,13 @@ class SimSpec(SimInfo):
     """Simulation spectrum with metadata."""
 
     def __init__(
-        self, path, detector, energy, nevents, scale=1.0, normalize=True
+        self,
+        path: Path,
+        detector: Optional[str],
+        energy: float,
+        nevents: int,
+        scale: float = 1.0,
+        normalize: bool = True,
     ):
         super().__init__(path, energy, nevents)
         self.detector = detector
@@ -767,7 +773,7 @@ class SimSpec(SimInfo):
             self.bin_edges[ebin + 1] - self.bin_edges[ebin]
         )
 
-    def find_bin(self, energy) -> int:
+    def find_bin(self, energy: float) -> int:
         """
         Finds bin number for bin containing ``energy``.
 
@@ -804,7 +810,7 @@ def interpolate_grid(
 
 def create_matrix(
     simulations: List[SimInfo],
-    detector: str,
+    detector: Optional[str],
     max_energy: Optional[float] = None,
     scale_hist_axis: float = 1e3,
     normalize: bool = True,
@@ -856,14 +862,17 @@ def create_matrix(
         for _, jenergy, weight in interpolate_grid(energies, sim_energy):
             shift = int(np.round(sim_energy - jenergy))
             if shift < 0:
-                mat[i, 0:i] += (
-                    weight * specs[jenergy].spec[abs(shift) : abs(shift) + i]
+                mat[i, 0 : i + 1] += (
+                    weight
+                    * specs[jenergy].spec[abs(shift) : abs(shift) + i + 1]
                 )
                 # mat[0:i, i] += weight * specs[jenergy].spec[abs(shift):abs(shift) + i].T
             elif shift > 0:
-                mat[i, shift:i] += weight * specs[jenergy].spec[0 : i - shift]
+                mat[i, shift : i + 1] += (
+                    weight * specs[jenergy].spec[0 : i - shift + 1]
+                )
                 # mat[shift:i, i] += weight * specs[jenergy].spec[0: i - shift].T
             else:
-                mat[i, 0:i] += weight * specs[jenergy].spec[0:i]
+                mat[i, 0 : i + 1] += weight * specs[jenergy].spec[0 : i + 1]
                 # mat[0:i, i] += weight * specs[jenergy].spec[0:i].T
     return mat, bin_edges, bin_edges

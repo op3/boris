@@ -120,7 +120,7 @@ class BorisApp:
             "--rema-name",
             help="name of the detector response matrix in matrix file  (default: %(default)s)",
             default="rema",
-            nargs=1,
+            nargs="?",
             type=str,
         )
         parser.add_argument(
