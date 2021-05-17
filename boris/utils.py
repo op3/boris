@@ -705,8 +705,12 @@ class SimInfo:
             Root of simulation directory. Paths are given
             relative to this directory.
         """
-        path, energy, nevents = line.split(" ")
-        return cls(sim_root / path.rstrip(":"), float(energy), int(nevents))
+        path, energy, nevents = line.rsplit(maxsplit=2)
+        return cls(
+            sim_root / path.rstrip(":").strip().strip('"'),
+            float(energy),
+            int(nevents),
+        )
 
     def __str__(self):
         """Convert to dat_file line."""

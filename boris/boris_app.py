@@ -74,14 +74,14 @@ class BorisApp:
             "-l",
             "--left",
             help="lower edge of first bin of deconvoluted spectrum (default: %(default)s)",
-            type=int,
+            type=float,
             default=0,
         )
         parser.add_argument(
             "-r",
             "--right",
             help="maximum upper edge of last bin of deconvoluted spectrum (default: maximum energy of simulation)",
-            type=int,
+            type=float,
             default=None,
         )
         parser.add_argument(
