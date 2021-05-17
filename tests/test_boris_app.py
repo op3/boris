@@ -45,10 +45,16 @@ def test_BorisApp(tmp_path):
     bin_edges = np.linspace(2000, 2200, 11)
     incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
     background = np.random.uniform(10, 100, size=10).astype(np.int64)
-    observed = (incident @ rema).astype(np.int64)
+    observed_wobg = (incident @ rema).astype(np.int64)
     observed = (incident @ rema + background).astype(np.int64)
     write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
     write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
+    write_hist(
+        tmp_path / "observed_wobg.npz",
+        "observed_wobg",
+        observed_wobg,
+        bin_edges,
+    )
     write_hist(tmp_path / "background.npz", "background", background, bin_edges)
     BorisApp()
     (tmp_path / "incident.npz").exists()
@@ -62,7 +68,7 @@ def test_BorisApp(tmp_path):
         "--tune=50",
         "--burn=50",
         str(tmp_path / "rema.npz"),
-        str(tmp_path / "observed.npz"),
+        str(tmp_path / "observed_wobg.npz"),
         str(tmp_path / "incident_wobg.npz"),
     ]
     BorisApp()

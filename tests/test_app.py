@@ -139,7 +139,10 @@ def test_boris(tmp_path):
         assert kwargs["tune"] == 1
         assert kwargs["thin"] == 1
         assert kwargs["burn"] == 1
-        return {"incident": np.ones((10, 10))}
+        return {
+            k: np.ones((10, 10))
+            for k in ["incident", "folded", "folded_plus_bg"]
+        }
 
     boris.app.boris(
         tmp_path / "rema.npz",

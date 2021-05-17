@@ -68,16 +68,18 @@ def deconvolute(
         incident = pm.Exponential(
             "incident", incident_normalization, shape=spectrum.shape[0]
         )
-        folded = incident @ rema
+        folded = pm.Deterministic("folded", incident @ rema)
         if background is None:
-            spectrum_detector = folded
+            folded_plus_bg = pm.Deterministic("folded_plus_bg", folded)
         else:
             background_inc = pm.Exponential(
-                "background",
+                "background_incident",
                 background_normalization,
                 shape=background.shape[0],
             )
-            spectrum_detector = folded + background_scale * background_inc
+            folded_plus_bg = pm.Deterministic(
+                "folded_plus_bg", folded + background_scale * background_inc
+            )
 
         # Measured data
         if background is not None:
@@ -87,13 +89,13 @@ def deconvolute(
                 observed=background,
             )
         observation = pm.Poisson(
-            "spectrum_obs", spectrum_detector, observed=spectrum
+            "spectrum_obs", folded_plus_bg, observed=spectrum
         )
 
         step = pm.NUTS()
         start = {"incident": incident_start}
         if background is not None:
-            start["background"] = background_start
+            start["background_incident"] = background_start
         trace = pm.sample(
             ndraws, step=step, start=start, return_inferencedata=False, **kwargs
         )

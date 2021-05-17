@@ -41,6 +41,7 @@ class Boris2SpecApp:
         boris2spec(
             self.args.incident_spectrum,
             self.args.output_path,
+            self.args.trace_name,
             self.args.plot,
             self.args.get_mean,
             self.args.get_median,
@@ -58,6 +59,12 @@ class Boris2SpecApp:
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        parser.add_argument(
+            "--trace-name",
+            help="Name of trace that is evaluated",
+            type=str,
+            default="incident",
         )
         parser.add_argument(
             "--plot",

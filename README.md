@@ -209,32 +209,37 @@ the `boris2spec` tool is provided:
 
 ```bash
 $ boris2spec --help
-usage: boris2spec [-h] [--plot] [--get-mean] [--get-median] [--get-variance]
-                  [--get-std-dev] [--get-min] [--get-max] [--get-hdi]
-                  [--hdi-prob PROB] [--force-overwrite]
+usage: boris2spec [-h] [--trace-name TRACE_NAME] [--plot] [--get-mean]
+                  [--get-median] [--get-variance] [--get-std-dev] [--get-min]
+                  [--get-max] [--get-hdi] [--hdi-prob PROB]
+                  [--force-overwrite]
                   incident_spectrum [output_path]
 
 positional arguments:
-  incident_spectrum  boris output for incident spectrum
-  output_path        Write resulting spectra to this file (multiple files are
-                     created for each exported spectrum if txt format is used)
-                     (default: None)
+  incident_spectrum     boris output for incident spectrum
+  output_path           Write resulting spectra to this file (multiple files
+                        are created for each exported spectrum if txt format
+                        is used) (default: None)
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --plot             Display a matplotlib plot of the queried spectra
-                     (default: False)
-  --get-mean         Get the mean for each bin (default: False)
-  --get-median       Get the median for each bin (default: False)
-  --get-variance     Get the variance for each bin (default: False)
-  --get-std-dev      Get the standard deviation for each bin (default: False)
-  --get-min          Get the minimum for each bin (default: False)
-  --get-max          Get the maximum for each bin (default: False)
-  --get-hdi          Get the highest density interval for each bin (default:
-                     False)
-  --hdi-prob PROB    HDI prob for which interval will be computed (default:
-                     0.682689492137086)
-  --force-overwrite  Overwrite existing files without warning (default: False)
+  -h, --help            show this help message and exit
+  --trace-name TRACE_NAME
+                        Name of trace that is evaluated (default: incident)
+  --plot                Display a matplotlib plot of the queried spectra
+                        (default: False)
+  --get-mean            Get the mean for each bin (default: False)
+  --get-median          Get the median for each bin (default: False)
+  --get-variance        Get the variance for each bin (default: False)
+  --get-std-dev         Get the standard deviation for each bin (default:
+                        False)
+  --get-min             Get the minimum for each bin (default: False)
+  --get-max             Get the maximum for each bin (default: False)
+  --get-hdi             Get the highest density interval for each bin
+                        (default: False)
+  --hdi-prob PROB       HDI prob for which interval will be computed (default:
+                        0.682689492137086)
+  --force-overwrite     Overwrite existing files without warning (default:
+                        False)
 ```
 
 It can be used to export mean, median, variance, standard deviation and highest density interval (lower and upper limit).
