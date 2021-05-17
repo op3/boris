@@ -73,6 +73,17 @@ def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
         exit(1)
 
 
+def check_if_exists(path: Path):
+    """
+    checks if path already exists
+
+    :param path: Path to check for
+    :raises Exception: if path exists
+    """
+    if path.exists():
+        raise Exception(f"Path {path} already exists")
+
+
 def boris(
     matrix: Path,
     observed_spectrum: Path,
@@ -136,6 +147,7 @@ def boris(
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
+    check_if_exists(incident_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
@@ -244,6 +256,7 @@ def sirob(
     :param deconvolute: Function used for deconvolution.
     :param kwargs: Passed to ``deconvolute`` function.
     """
+    check_if_exists(observed_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
@@ -322,6 +335,8 @@ def boris2spec(
         Probability for which the highest density interval will be computed.
         Defaults to 1σ.
     """
+    if output_path:
+        check_if_exists(output_path)
     spec, bin_edges = read_spectrum(incident_spectrum, "incident")
     bin_edges = bin_edges[-1]
 
@@ -416,6 +431,7 @@ def make_matrix(
         given relative to this directory. If ``None``, it is assumed
         that they are given relative to ``dat_file_path``.
     """
+    check_if_exists(output_path)
     with do_step(f"Reading simulation dat file {dat_file_path}"):
         simulations = read_dat_file(dat_file_path, sim_dir)
         dets = dets or get_keys_in_container(simulations[0].path)

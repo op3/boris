@@ -35,6 +35,7 @@ from boris.makematrix_app import MakeMatrixApp
 from boris.app import (
     do_step,
     logger,
+    check_if_exists,
     make_matrix,
     setup_logging,
     sirob,
@@ -217,3 +218,10 @@ def test_make_matrix(tmp_path, filename):
         assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 600
         assert np.isclose(bin_edges[0], 0.0)
         assert np.isclose(bin_edges[-1], 600.0)
+
+
+def test_check_if_exists(tmp_path):
+    with open(tmp_path / "test.txt", "w") as f:
+        print("", file=f)
+    with pytest.raises(Exception):
+        check_if_exists(tmp_path / "test.txt")
