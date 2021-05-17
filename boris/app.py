@@ -319,7 +319,7 @@ def sirob(
 def boris2spec(
     incident_spectrum: Path,
     output_path: Optional[Path] = None,
-    trace_name: str = "incident",
+    var_name: str = "incident",
     plot: bool = False,
     get_mean: bool = False,
     get_median: bool = False,
@@ -341,7 +341,7 @@ def boris2spec(
     :param output_path:
         Path of container file which is created containing the generated
         spectra (optional).
-    :param trace_name: Name of trace that is evaluated.
+    :param var_name: Name of variable that is evaluated.
     :param plot: Display matplotlib window of all spectra (optional).
     :param get_mean: Generate spectrum containing mean of each bin.
     :param get_median: Generate spectrum containing median of each bin.
@@ -360,7 +360,7 @@ def boris2spec(
     """
     if output_path and not force_overwrite:
         check_if_exists(output_path)
-    spec, bin_edges = read_spectrum(incident_spectrum, trace_name)
+    spec, bin_edges = read_spectrum(incident_spectrum, var_name)
     bin_edges = bin_edges[-1]
 
     res = {}
