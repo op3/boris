@@ -38,13 +38,13 @@ class SirobApp:
         setup_logging()
         sirob(
             self.args.matrixfile,
-            self.args.rema_name,
             self.args.incident_spectrum,
             self.args.observed_spectrum,
             self.args.binning_factor,
             self.args.left,
             self.args.right,
             self.args.hist,
+            self.args.rema_name,
             self.args.bg_spectrum,
             self.args.bg_hist,
             self.args.bg_scale,
@@ -125,7 +125,7 @@ class SirobApp:
             "--rema-name",
             help="Name of the detector response matrix in matrix file",
             default="rema",
-            nargs=1,
+            nargs="?",
             type=str,
         )
         parser.add_argument(
