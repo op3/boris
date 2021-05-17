@@ -67,6 +67,7 @@ setup(
             "boris2spec=boris.boris2spec_app:Boris2SpecApp",
             "makematrix=boris.makematrix_app:MakeMatrixApp",
             "sirob=boris.sirob_app:SirobApp",
+            "checkmatrix=boris.checkmatrix_app:CheckMatrixApp",
         ]
     },
     packages=[

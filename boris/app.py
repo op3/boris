@@ -434,3 +434,49 @@ def make_matrix(
             [remas[idx][1], remas[idx][2]],
             output_path,
         )
+
+
+def check_matrix(
+    matrix: Path,
+    binning_factor: int,
+    left: int,
+    right: int,
+    rema_name: str = "rema",
+    norm_hist: Optional[str] = None,
+) -> None:
+    """
+    Visualizes detector response matrix.
+
+    :param matrix: Path of container file containing the response matrix.
+    :param binning_factor:
+        Number of neighboring bins of response matrix that are merged,
+        starting at ``left``.
+    :param left:
+        Crop ``bin_edges`` of response matrix to the lowest bin
+        still containing ``left``.
+    :param right:
+        Crop ``bin_edges`` of response matrix to the highest bin
+        still containing ``right``.
+    :param rema_name:
+        Name of the detector response matrix in matrix file
+        (only required if not unique).
+    :param norm_hist:
+        Divide detector response matrix by this histogram
+        (e. g., to correct for number of simulated particles).
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+
+    with do_step(f"Reading response matrix {rema_name} from {matrix}"):
+        rema, rema_bin_edges = get_rema(
+            matrix, rema_name, binning_factor, left, right, norm_hist
+        )
+
+    plt.imshow(
+        rema, norm=LogNorm(vmin=rema[rema > 1e-20].min(), vmax=rema.max())
+    )
+    plt.title(rema_name)
+    plt.xlabel("Observed energy")
+    plt.ylabel("Particle energy")
+    plt.tight_layout()
+    plt.show()

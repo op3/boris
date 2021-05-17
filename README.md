@@ -237,6 +237,39 @@ The `incident_spectrum` argument is the output of a boris run (`.root`, `.hdf5` 
 If the `--plot` argument is provided, the chosen histograms are visualized using matplotlib.
 If `output_path` is provided, the resulting histograms are written to file(s) (`.root`, `.hdf5`, `.npz` and `.txt` are supported).
 
+Furthermore, the `checkmatrix` tool is available to view detector response matrices:
+
+```bash
+$ checkmatrix --help
+usage: checkmatrix [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR]
+                   [--rema-name [REMA_NAME]] [--norm-hist [NORM_HIST]]
+                   matrixfile
+
+Display detector response matrix.
+
+positional arguments:
+  matrixfile            container file containing detector response matrix
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
+                        (default: 0)
+  -r RIGHT, --right RIGHT
+                        maximum upper edge of last bin of deconvoluted
+                        spectrum (default: maximum energy of simulation)
+  -b BINNING_FACTOR, --binning-factor BINNING_FACTOR
+                        rebinning factor, group this many bins together
+                        (default: 10)
+  --rema-name [REMA_NAME]
+                        name of the detector response matrix in matrix file
+                        (default: rema)
+  --norm-hist [NORM_HIST]
+                        divide detector response matrix by this histogram (e.
+                        g., to correct for number of simulated particles)
+                        (optional) (default: None)
+```
+
+
 ## License
 
 Copyright © 2020–2021

@@ -30,6 +30,7 @@ import boris.app
 from boris.boris_app import BorisApp
 from boris.sirob_app import SirobApp
 from boris.boris2spec_app import Boris2SpecApp
+from boris.checkmatrix_app import CheckMatrixApp
 from boris.makematrix_app import MakeMatrixApp
 from boris.app import (
     do_step,
@@ -47,6 +48,7 @@ from tests.helpers.utils import create_simulations
     "app, name",
     [
         (BorisApp, "boris"),
+        (CheckMatrixApp, "checkmatrix"),
         (SirobApp, "sirob"),
         (Boris2SpecApp, "boris2spec"),
         (MakeMatrixApp, "makematrix"),
