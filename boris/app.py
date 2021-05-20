@@ -25,16 +25,15 @@ from pathlib import Path
 from typing import Any, Callable, Generator, List, Mapping, Optional
 
 import numpy as np
+from tqdm import tqdm
 
 from boris.utils import (
     create_matrix,
     get_keys_in_container,
     get_rema,
     get_quantities,
-    hdi,
     read_dat_file,
     read_rebin_spectrum,
-    read_spectrum,
     write_hist,
     write_hists,
 )
@@ -362,7 +361,11 @@ def boris2spec(
     if output_path and not force_overwrite:
         check_if_exists(output_path)
 
-    logger.info("Available keys in trace_file: {}".format(", ".join(get_keys_in_container(trace_file))))
+    logger.info(
+        "Available keys in trace_file: {}".format(
+            ", ".join(get_keys_in_container(trace_file))
+        )
+    )
 
     res = {}
     bin_edges = None
@@ -469,8 +472,9 @@ def make_matrix(
         dets = dets or get_keys_in_container(simulations[0].path)
 
     remas = dict()
-    for det in dets or [None]:
-        with do_step(f"Creating matrix for detector {det}"):
+    with tqdm(dets or [None], desc="Creating matrices", unit="matrix") as pbar:
+        for det in pbar:
+            pbar.set_description(f"Creating matrix for detector {det}")
             remas[det] = create_matrix(
                 simulations, det, max_energy, scale_hist_axis
             )

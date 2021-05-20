@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
+from arviz import hdi
 
 logger = logging.getLogger(__name__)
 
@@ -98,64 +99,18 @@ def write_hist(
     histfile: Path,
     name: str,
     hist: np.ndarray,
-    bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
+    bin_edges: Union[np.ndarray, List[np.ndarray]],
     force_overwrite: bool = False,
 ) -> None:
     """
     Writes single histogram to file.
-
     :param histfile: Path of created container file.
     :param name: Name of histogram in container file.
     :param hist: Histogram.
     :param bin_edges: Bin edges.
     :param force_overwrite: Overwrite output_path if it exists.
     """
-    # TODO: Remove, only use write_hists()
-    if not force_overwrite and histfile.exists():
-        raise Exception(f"Error writing {histfile}, already exists.")
-    if not histfile.parent.exists():
-        histfile.parent.mkdir(parents=True)
-    if histfile.suffix == ".npz":
-        np.savez_compressed(
-            histfile,
-            **{
-                name: hist,
-                **_bin_edges_dict(bin_edges),
-            },
-        )
-    elif histfile.suffix == ".txt":
-        if hist.ndim != 1:
-            raise Exception(
-                f"Writing {hist.ndim}-dimensional histograms to txt not supported."
-            )
-        np.savetxt(
-            histfile,
-            np.array([bin_edges[:-1], bin_edges[1:], hist]).T,
-            header=f"bin_edges_lo, bin_edges_hi, {name}",
-        )
-    elif histfile.suffix == ".hdf5":
-        import h5py
-
-        with h5py.File(histfile, "w") as f:
-            f.create_dataset(
-                name, data=hist, compression="gzip", compression_opts=9
-            )
-            for key, arr in _bin_edges_dict(bin_edges).items():
-                f.create_dataset(
-                    key,
-                    data=arr,
-                    compression="gzip",
-                    compression_opts=9,
-                )
-    elif histfile.suffix == ".root":
-        import uproot3 as uproot
-
-        with uproot.recreate(
-            histfile, compression=uproot.write.compress.LZMA(6)
-        ) as f:
-            f[name] = numpy_to_root_hist(hist, bin_edges)
-    else:
-        raise Exception(f"Unknown output format: {histfile.suffix}")
+    return write_hists({name: hist}, bin_edges, histfile, force_overwrite)
 
 
 def write_hists(
@@ -485,27 +440,6 @@ def read_rebin_spectrum(
         spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
 
     return spectrum, [spectrum_bin_edges]
-
-
-def hdi(
-    sample: np.ndarray,
-    hdi_prob: Union[float, np.number] = np.math.erf(np.sqrt(0.5)),
-) -> Tuple[float, float]:
-    """
-    Calculates highest density interval (HDI) of sample.
-
-    :param sample: Sample to calculate hdi for.
-    :param hdi_prob:
-        The highest density interval is calculated for this probiblity.
-    :return:
-        - Lower edge of highest density interval.
-        - Upper edge of highest density interval.
-    """
-    sample.sort(axis=0)
-    interval = int(np.ceil(len(sample) * (1 - hdi_prob)))
-    candidates = sample[-interval:] - sample[:interval]
-    best = candidates.argmin()
-    return (sample[best], sample[best - interval])
 
 
 def reduce_binning(
@@ -953,7 +887,7 @@ def get_quantities(
 
     if get_hdi:
         res[f"{var_name}_hdi_lo"], res[f"{var_name}_hdi_hi"] = hdi(
-            spec, hdi_prob=hdi_prob
-        )
+            spec[None, :, :], hdi_prob=hdi_prob
+        ).T
 
     return res, bin_edges

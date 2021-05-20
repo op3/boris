@@ -58,6 +58,8 @@ setup(
     install_requires=[
         "numpy",
         "pymc3",
+        "arviz>=0.10.0",
+        "tqdm",
         "uproot3",
         "uproot",
     ],

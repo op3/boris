@@ -380,14 +380,6 @@ def test_get_keys_in_container_unsupported(tmp_path):
     assert len(res) == 0
 
 
-def test_hdi():
-    sample = np.linspace(-10, 10, 1001)
-    sample = sample ** 3
-    lo, hi = hdi(sample)
-    assert lo == sample[158]
-    assert hi == sample[841]
-
-
 def test_rebin_uniform():
     bin_edges_old = np.linspace(0.0, 50.0, 51)
     bin_edges_new = np.linspace(0.0, 60.0, 21)
