@@ -39,9 +39,9 @@ class Boris2SpecApp:
 
         setup_logging()
         boris2spec(
-            self.args.incident_spectrum,
+            self.args.trace_file,
             self.args.output_path,
-            self.args.var_name,
+            self.args.var_names,
             self.args.plot,
             self.args.get_mean,
             self.args.get_median,
@@ -61,10 +61,11 @@ class Boris2SpecApp:
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
         parser.add_argument(
-            "--var-name",
-            help="Name of variable that is evaluated",
+            "--var-names",
+            help="Names of variables that are evaluated",
             type=str,
-            default="incident",
+            nargs="*",
+            default=["incident"],
         )
         parser.add_argument(
             "--plot",
@@ -124,8 +125,8 @@ class Boris2SpecApp:
         )
 
         parser.add_argument(
-            "incident_spectrum",
-            help="boris output for incident spectrum",
+            "trace_file",
+            help="boris output containing traces",
             type=Path,
         )
         parser.add_argument(

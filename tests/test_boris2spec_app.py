@@ -24,17 +24,25 @@ from unittest import mock
 
 import numpy as np
 
-from boris.utils import read_spectrum, write_hist
+from boris.utils import read_spectrum, write_hists
 from boris.boris2spec_app import Boris2SpecApp, init
 
 
 def test_Boris2SpecApp(tmp_path):
     incident = np.ones((100, 10))
+    other = np.ones(100)
     bin_edges = np.linspace(2000, 2200, 11)
-    write_hist(tmp_path / "incident.npz", "incident", incident, bin_edges)
+    write_hists(
+        {"incident": incident, "spectrum": other},
+        bin_edges,
+        tmp_path / "incident.npz",
+    )
 
     sys.argv = [
         "boris2spec",
+        "--var-names",
+        "incident",
+        "spectrum",
         "--get-mean",
         "--get-median",
         "--get-variance",
@@ -47,12 +55,14 @@ def test_Boris2SpecApp(tmp_path):
     ]
     Boris2SpecApp()
     assert (tmp_path / "output.npz").exists()
-    mean, (bin_edges,) = read_spectrum(tmp_path / "output.npz", "mean")
+    mean, (bin_edges,) = read_spectrum(tmp_path / "output.npz", "incident_mean")
     assert np.isclose(mean, np.ones(10)).all()
     assert bin_edges.shape[0] == 11
 
     for key in ["mean", "median", "var", "std", "hdi_lo", "hdi_hi"]:
-        res, (bin_edges,) = read_spectrum(tmp_path / "output.npz", key)
+        res, (bin_edges,) = read_spectrum(
+            tmp_path / "output.npz", f"incident_{key}"
+        )
         assert res.ndim == 1
         assert res.shape[0] == 10
 
@@ -60,11 +70,19 @@ def test_Boris2SpecApp(tmp_path):
 @mock.patch("matplotlib.pyplot")
 def test_Boris2SpecApp_plot(mock_plt, tmp_path):
     incident = np.ones((100, 10))
+    other = np.ones(100)
     bin_edges = np.linspace(2000, 2200, 11)
-    write_hist(tmp_path / "incident.npz", "incident", incident, bin_edges)
+    write_hists(
+        {"incident": incident, "spectrum": other},
+        bin_edges,
+        tmp_path / "incident.npz",
+    )
 
     sys.argv = [
         "boris2spec",
+        "--var-names",
+        "incident",
+        "spectrum",
         "--get-mean",
         "--get-hdi",
         "--plot",
