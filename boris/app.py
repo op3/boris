@@ -400,6 +400,9 @@ def boris2spec(
         )
         res.update(quantities)
 
+    if output_path and res and bin_edges is not None:
+        write_hists(res, bin_edges, output_path, force_overwrite)
+
     if plot:
         import matplotlib.pyplot as plt
 
@@ -450,9 +453,6 @@ def boris2spec(
         plt.legend()
         plt.tight_layout()
         plt.show()
-
-    if output_path and res and bin_edges is not None:
-        write_hists(res, bin_edges, output_path, force_overwrite)
 
 
 def make_matrix(
