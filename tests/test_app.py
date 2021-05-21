@@ -25,6 +25,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 import numpy as np
+import arviz
 
 import boris.app
 from boris.boris_app import BorisApp
@@ -137,17 +138,18 @@ def test_boris(tmp_path):
     def _deconvolute(*args, **kwargs):
         assert kwargs["ndraws"] == 1
         assert kwargs["tune"] == 1
-        assert kwargs["thin"] == 1
-        assert kwargs["burn"] == 1
-        return {
-            k: np.ones((10, 10))
-            for k in [
-                "incident",
-                "folded",
-                "folded_plus_bg",
-                "incident_scaled_to_fep",
-            ]
-        }
+        arr1 = np.ones(10)
+        arr2 = np.ones((2, 100, 10))
+        trace = arviz.from_dict({
+            "incident": arr2,
+            "folded": arr2,
+            "folded_plus_bg": arr2,
+            "incident_scaled_to_fep": arr2,
+        }, observed_data={
+            "spectrum_obs": arr1,
+            "background_obs": arr1,
+        })
+        return trace
 
     boris.app.boris(
         tmp_path / "rema.npz",

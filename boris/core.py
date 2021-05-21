@@ -23,7 +23,7 @@ from typing import Optional
 
 import numpy as np
 import pymc3 as pm
-
+from arviz import InferenceData
 
 def deconvolute(
     rema: np.ndarray,
@@ -31,10 +31,8 @@ def deconvolute(
     background: Optional[np.ndarray] = None,
     background_scale: float = 1.0,
     ndraws: int = 10000,
-    thin: int = 1,
-    burn: int = 1000,
     **kwargs,
-) -> pm.backends.base.MultiTrace:
+) -> InferenceData:
     """
     Generates a MCMC chain, deconvolutes spectrum using response matrix.
 
@@ -44,8 +42,6 @@ def deconvolute(
     :param background_scale: Relative live time of background spectrum
     :param ndraws: Number of draws to sample
     :param tune: Number of steps to tune parameters
-    :param thin: Thinning factor to decrease autocorrelation time
-    :param burn: Discard initial steps (burn-in time)
     :param \**kwargs: Keyword arguments are passed to ``PyMC3.sample``.
 
     :return: Thinned and burned MCMC trace.
@@ -101,6 +97,6 @@ def deconvolute(
         if background is not None:
             start["background_incident"] = background_start
         trace = pm.sample(
-            ndraws, step=step, start=start, return_inferencedata=False, **kwargs
+            ndraws, step=step, start=start, return_inferencedata=True, **kwargs
         )
-    return trace[burn::thin]
+    return trace

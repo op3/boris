@@ -101,6 +101,8 @@ def boris(
     norm_hist: Optional[str] = None,
     force_overwrite: bool = False,
     deconvolute: Optional[Callable[..., Mapping]] = None,
+    thin: int = 1,
+    burn: int = 1000,
     **kwargs: Any,
 ) -> None:
     r"""
@@ -146,6 +148,8 @@ def boris(
         (e. g., to correct for number of simulated particles).
     :param force_overwrite: Overwrite output_path if it exists.
     :param deconvolute: Alternate function used for deconvolution.
+    :param thin: Thinning factor to decrease autocorrelation time
+    :param burn: Discard initial steps (burn-in time)
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
@@ -192,23 +196,16 @@ def boris(
             background_scale,
             **kwargs,
         )
+        trace.stack(sample=["chain", "draw"], inplace=True)
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
+        var_names = ["incident", "folded", "incident_scaled_to_fep"]
         if background is not None:
-            out = {
-                k: trace[k]
-                for k in [
-                    "incident",
-                    "folded",
-                    "folded_plus_bg",
-                    "incident_scaled_to_fep",
-                ]
-            }
-        else:
-            out = {
-                k: trace[k]
-                for k in ["incident", "folded", "incident_scaled_to_fep"]
-            }
+            var_names += ["folded_plus_bg"]
+        out = {
+            k: trace.posterior.get(k).T[burn::thin].values
+            for k in var_names
+        }
         out["spectrum"] = spectrum
         if background is not None:
             out["spectrum_background"] = background
