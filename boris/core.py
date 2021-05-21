@@ -70,7 +70,7 @@ def deconvolute(
         )
         folded = pm.Deterministic("folded", incident @ rema)
         if background is None:
-            folded_plus_bg = pm.Deterministic("folded_plus_bg", folded)
+            folded_plus_bg = folded
         else:
             background_inc = pm.Exponential(
                 "background_incident",
@@ -80,6 +80,10 @@ def deconvolute(
             folded_plus_bg = pm.Deterministic(
                 "folded_plus_bg", folded + background_scale * background_inc
             )
+
+        incident_scaled_to_fep = pm.Deterministic(
+            "incident_scaled_to_fep", incident * np.diag(rema)
+        )
 
         # Measured data
         if background is not None:

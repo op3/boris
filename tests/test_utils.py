@@ -454,7 +454,7 @@ def test_rebin_hist(size):
     hist = np.random.uniform(size=size)
     rebin, bin_edges = rebin_hist(hist, 4)
     assert rebin.shape[0] + 1 == bin_edges.shape[0]
-    assert np.isclose(hist.sum(), rebin.sum())
+    assert np.isclose(hist.sum(), rebin.sum() * 4)
     for i, j in zip(hist.shape, rebin.shape):
         assert i == 4 * j
 
@@ -493,8 +493,8 @@ def test_rebin_hist_bin_edges(ndim):
     bin_edges = np.linspace(10.0, 330.0, 33)
     rebin, rebin_edges = rebin_hist(hist, 4, bin_edges, 20.0, 300.0)
     assert rebin.shape == (7,) * ndim
-    assert np.isclose(hist[(slice(1, -3),) * ndim].sum(), rebin.sum())
-    assert np.isclose(hist[(slice(1, 5),) * ndim].sum(), rebin[(0,) * ndim])
+    assert np.isclose(hist[(slice(1, -3),) * ndim].sum(), rebin.sum() * 4)
+    assert np.isclose(hist[(slice(1, 5),) * ndim].sum(), rebin[(0,) * ndim] * 4)
     assert np.isclose(rebin_edges, np.linspace(20.0, 300.0, 8)).all()
 
 
@@ -629,14 +629,14 @@ def test_get_rema(tmp_path):
 
     res_rema, res_bin_edges = get_rema(path, "rema", 2, 0, 10)
     assert res_rema.shape == (5, 5)
-    assert np.isclose(res_rema.sum(), rema.sum())
+    assert np.isclose(res_rema.sum() * 2, rema.sum())
     assert res_bin_edges.shape == (6,)
 
     res_rema, res_bin_edges = get_rema(
         path, "rema", 2, 0, 10, "n_simulated_particles"
     )
     assert res_rema.shape == (5, 5)
-    assert np.isclose(100.0 * res_rema.sum(), rema.sum())
+    assert np.isclose(100.0 * res_rema.sum() * 2, rema.sum())
     assert res_bin_edges.shape == (6,)
 
     rema = np.ones((10, 20))

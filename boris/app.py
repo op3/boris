@@ -194,7 +194,21 @@ def boris(
         )
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
-        out = {k: trace[k] for k in ["incident", "folded", "folded_plus_bg"]}
+        if background is not None:
+            out = {
+                k: trace[k]
+                for k in [
+                    "incident",
+                    "folded",
+                    "folded_plus_bg",
+                    "incident_scaled_to_fep",
+                ]
+            }
+        else:
+            out = {
+                k: trace[k]
+                for k in ["incident", "folded", "incident_scaled_to_fep"]
+            }
         out["spectrum"] = spectrum
         if background is not None:
             out["spectrum_background"] = background

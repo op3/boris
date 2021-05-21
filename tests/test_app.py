@@ -141,7 +141,12 @@ def test_boris(tmp_path):
         assert kwargs["burn"] == 1
         return {
             k: np.ones((10, 10))
-            for k in ["incident", "folded", "folded_plus_bg"]
+            for k in [
+                "incident",
+                "folded",
+                "folded_plus_bg",
+                "incident_scaled_to_fep",
+            ]
         }
 
     boris.app.boris(

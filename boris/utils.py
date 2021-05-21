@@ -521,7 +521,10 @@ def rebin_hist(
     )
     for i in range(1, num_dim):
         res = res.sum(axis=i)
-    return res, bin_edges[left_bin : right_bin + 1 : binning_factor]
+    return (
+        res / binning_factor,
+        bin_edges[left_bin : right_bin + 1 : binning_factor],
+    )
 
 
 def rebin_uniform(
