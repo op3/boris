@@ -67,10 +67,10 @@ def test_Boris2SpecApp(tmp_path):
         assert res.shape[0] == 10
 
 
-@mock.patch("matplotlib.pyplot")
+@mock.patch("matplotlib.pyplot.show")
 def test_Boris2SpecApp_plot(mock_plt, tmp_path):
     incident = np.ones((100, 10))
-    other = np.ones(100)
+    other = np.ones(10)
     bin_edges = np.linspace(2000, 2200, 11)
     write_hists(
         {"incident": incident, "spectrum": other},
@@ -89,8 +89,7 @@ def test_Boris2SpecApp_plot(mock_plt, tmp_path):
         str(tmp_path / "incident.npz"),
     ]
     Boris2SpecApp()
-    assert mock_plt.legend.called
-    assert mock_plt.show.called
+    assert mock_plt.called
 
 
 def test_Boris2SpecApp_wrong_args(tmp_path):

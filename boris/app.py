@@ -414,13 +414,15 @@ def boris2spec(
             "max": "Maximum",
         }
 
-        for var_name in var_names:
+        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        for var_name, props in zip(var_names, prop_cycle()):
             if var_name in res:
                 plt.step(
                     bin_centers,
                     res[var_name],
                     where="mid",
                     label=var_name,
+                    **props,
                 )
             else:
                 if get_hdi:
@@ -428,9 +430,9 @@ def boris2spec(
                         bin_centers,
                         res[f"{var_name}_hdi_lo"],
                         res[f"{var_name}_hdi_hi"],
-                        label=f"Highest Density Interval ({var_name})",
                         step="mid",
                         alpha=0.3,
+                        **props,
                     )
 
                 for key in label.keys():
@@ -440,8 +442,11 @@ def boris2spec(
                             res[f"{var_name}_{key}"],
                             where="mid",
                             label=f"{label[key]} ({var_name})",
+                            **props,
                         )
 
+        plt.ylim(0, None)
+        plt.xlim(bin_edges[0], bin_edges[-1])
         plt.legend()
         plt.tight_layout()
         plt.show()
