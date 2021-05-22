@@ -101,6 +101,7 @@ def boris(
     cal_bin_centers: Optional[List[float]] = None,
     cal_bin_edges: Optional[List[float]] = None,
     norm_hist: Optional[str] = None,
+    matrix_alt: Optional[Path] = None,
     force_overwrite: bool = False,
     deconvolute: Optional[Callable[..., Mapping]] = None,
     thin: int = 1,
@@ -148,6 +149,10 @@ def boris(
     :param norm_hist:
         Divide detector response matrix by this histogram
         (e. g., to correct for number of simulated particles).
+    :param matrix_alt:
+        Path of container file containing alternative matrix
+        that is used to create a linear combination of two
+        matrices (interpolate between both matrices).
     :param force_overwrite: Overwrite output_path if it exists.
     :param deconvolute: Alternate function used for deconvolution.
     :param thin: Thinning factor to decrease autocorrelation time
@@ -161,6 +166,15 @@ def boris(
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
         )
+
+    rema_alt = None
+    if matrix_alt:
+        with do_step(
+            f"Reading alternative response matrix {rema_name} from {matrix_alt}"
+        ):
+            rema_alt, rema_alt_bin_edges = get_rema(
+                matrix_alt, rema_name, binning_factor, left, right, norm_hist
+            )
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -196,12 +210,20 @@ def boris(
             spectrum,
             background,
             background_scale,
+            rema_alt,
             **kwargs,
         )
         import arviz
 
         print(arviz.waic(trace, var_name="spectrum_obs"))
         trace.stack(sample=["chain", "draw"], inplace=True)
+        
+        # TODO: Find better way to export this?
+        if matrix_alt is not None:
+            interpolation = trace.posterior.get("interpolation").T.values
+            interpolation_mean = np.mean(interpolation)
+            interpolation_std = np.std(interpolation)
+            logger.info(f"Interpolation parameter: {interpolation_mean} ± {interpolation_std}")
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
         var_names = ["incident", "folded", "incident_scaled_to_fep"]

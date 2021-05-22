@@ -31,6 +31,7 @@ def deconvolute(
     spectrum: np.ndarray,
     background: Optional[np.ndarray] = None,
     background_scale: float = 1.0,
+    rema_alt: Optional[np.ndarray] = None,
     ndraws: int = 10000,
     **kwargs,
 ) -> InferenceData:
@@ -41,8 +42,10 @@ def deconvolute(
     :param spectrum: Observed spectrum
     :param background: Background spectrum
     :param background_scale: Relative live time of background spectrum
+    :param rema_alt:
+        Alternative matrix that is used to create a linear combination
+        of two matrices (interpolate between both matrices).
     :param ndraws: Number of draws to sample
-    :param tune: Number of steps to tune parameters
     :param \**kwargs: Keyword arguments are passed to ``PyMC3.sample``.
 
     :return: Thinned and burned MCMC trace.
@@ -65,7 +68,17 @@ def deconvolute(
         incident = pm.Exponential(
             "incident", incident_normalization, shape=spectrum.shape[0]
         )
-        folded = pm.Deterministic("folded", incident @ rema)
+        if rema_alt is None:
+            rema_eff = rema
+            rema_eff_diag = np.diag(rema)
+        else:
+            interpolation = pm.Uniform("interpolation", 0, 1, shape=())
+            rema_eff = (1 - interpolation) * rema + interpolation * rema_alt
+            rema_eff_diag = (
+                (1 - interpolation) * np.diag(rema)
+                + interpolation * np.diag(rema_alt)
+            )
+        folded = pm.Deterministic("folded", incident @ rema_eff)
         if background is None:
             folded_plus_bg = folded
         else:
@@ -79,7 +92,7 @@ def deconvolute(
             )
 
         incident_scaled_to_fep = pm.Deterministic(
-            "incident_scaled_to_fep", incident * np.diag(rema)
+            "incident_scaled_to_fep", incident * rema_eff_diag
         )
 
         # Measured data

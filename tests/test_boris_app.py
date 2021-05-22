@@ -37,17 +37,21 @@ def test_BorisApp(tmp_path):
         "--burn=50",
         "--bg-spectrum",
         str(tmp_path / "background.npz"),
+        "--matrixfile-alt",
+        str(tmp_path / "rema_alt.npz"),
         str(tmp_path / "rema.npz"),
         str(tmp_path / "observed.npz"),
         str(tmp_path / "incident.npz"),
     ]
     rema = 0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2)
+    rema_alt = 0.1 * np.diag(np.ones(10)) + 0.02 * np.diag(np.ones(8), 2)
     bin_edges = np.linspace(2000, 2200, 11)
     incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
     background = np.random.uniform(10, 100, size=10).astype(np.int64)
     observed_wobg = (incident @ rema).astype(np.int64)
     observed = (incident @ rema + background).astype(np.int64)
     write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
+    write_hist(tmp_path / "rema_alt.npz", "rema", rema_alt, bin_edges)
     write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
     write_hist(
         tmp_path / "observed_wobg.npz",

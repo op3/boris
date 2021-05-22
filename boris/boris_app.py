@@ -58,6 +58,7 @@ class BorisApp:
             self.args.cal_bin_centers,
             self.args.cal_bin_edges,
             self.args.norm_hist,
+            self.args.matrixfile_alt,
             self.args.force_overwrite,
             ndraws=self.args.ndraws,
             tune=self.args.tune,
@@ -130,6 +131,13 @@ class BorisApp:
             nargs="?",
             default=None,
             type=str,
+        )
+        parser.add_argument(
+            "--matrixfile-alt",
+            help="Load an additional detector response matrix from this matrix file (same rema-name as main matrix). Boris will create a linear combination of the main matrixfile and the alternative matrix file. (default: %(default)s)",
+            nargs="?",
+            default=None,
+            type=Path,
         )
 
         calgroup = parser.add_mutually_exclusive_group()

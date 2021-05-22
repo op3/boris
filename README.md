@@ -31,9 +31,10 @@ $ boris --help
 usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--rema-name [REMA_NAME]]
-             [--norm-hist [NORM_HIST]] [--cal-bin-centers C0 [C1 ...] |
-             --cal-bin-edges C0 [C1 ...]] [-s SEED] [-c CORES] [--thin THIN]
-             [--tune TUNE] [--burn BURN] [-n NDRAWS] [--force-overwrite]
+             [--norm-hist [NORM_HIST]] [--matrixfile-alt [MATRIXFILE_ALT]]
+             [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
+             [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN]
+             [-n NDRAWS] [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
 Deconvolute observed_spectrum using using the supplied detector response
@@ -70,6 +71,12 @@ optional arguments:
                         divide detector response matrix by this histogram (e.
                         g., to correct for number of simulated particles)
                         (optional) (default: None)
+  --matrixfile-alt [MATRIXFILE_ALT]
+                        Load an additional detector response matrix from this
+                        matrix file (same rema-name as main matrix). Boris
+                        will create a linear combination of the main
+                        matrixfile and the alternative matrix file. (default:
+                        None)
   --cal-bin-centers C0 [C1 ...]
                         energy calibration for the bin centers of the observed
                         spectrum, if bins are unknown (tv style calibration)
@@ -209,36 +216,38 @@ the `boris2spec` tool is provided:
 
 ```bash
 $ boris2spec --help
-usage: boris2spec [-h] [--var-name VAR_NAME] [--plot] [--get-mean]
-                  [--get-median] [--get-variance] [--get-std-dev] [--get-min]
-                  [--get-max] [--get-hdi] [--hdi-prob PROB]
+usage: boris2spec [-h] [--var-names [VAR_NAMES [VAR_NAMES ...]]] [--plot]
+                  [--get-mean] [--get-median] [--get-variance] [--get-std-dev]
+                  [--get-min] [--get-max] [--get-hdi] [--hdi-prob PROB]
                   [--force-overwrite]
-                  incident_spectrum [output_path]
+                  trace_file [output_path]
 
 positional arguments:
-  incident_spectrum    boris output for incident spectrum
-  output_path          Write resulting spectra to this file (multiple files
-                       are created for each exported spectrum if txt format is
-                       used) (default: None)
+  trace_file            boris output containing traces
+  output_path           Write resulting spectra to this file (multiple files
+                        are created for each exported spectrum if txt format
+                        is used) (default: None)
 
 optional arguments:
-  -h, --help           show this help message and exit
-  --var-name VAR_NAME  Name of variable that is evaluated (default: incident)
-  --plot               Display a matplotlib plot of the queried spectra
-                       (default: False)
-  --get-mean           Get the mean for each bin (default: False)
-  --get-median         Get the median for each bin (default: False)
-  --get-variance       Get the variance for each bin (default: False)
-  --get-std-dev        Get the standard deviation for each bin (default:
-                       False)
-  --get-min            Get the minimum for each bin (default: False)
-  --get-max            Get the maximum for each bin (default: False)
-  --get-hdi            Get the highest density interval for each bin (default:
-                       False)
-  --hdi-prob PROB      HDI prob for which interval will be computed (default:
-                       0.682689492137086)
-  --force-overwrite    Overwrite existing files without warning (default:
-                       False)
+  -h, --help            show this help message and exit
+  --var-names [VAR_NAMES [VAR_NAMES ...]]
+                        Names of variables that are evaluated (default:
+                        ['incident'])
+  --plot                Display a matplotlib plot of the queried spectra
+                        (default: False)
+  --get-mean            Get the mean for each bin (default: False)
+  --get-median          Get the median for each bin (default: False)
+  --get-variance        Get the variance for each bin (default: False)
+  --get-std-dev         Get the standard deviation for each bin (default:
+                        False)
+  --get-min             Get the minimum for each bin (default: False)
+  --get-max             Get the maximum for each bin (default: False)
+  --get-hdi             Get the highest density interval for each bin
+                        (default: False)
+  --hdi-prob PROB       HDI prob for which interval will be computed (default:
+                        0.682689492137086)
+  --force-overwrite     Overwrite existing files without warning (default:
+                        False)
 ```
 
 It can be used to export mean, median, variance, standard deviation and highest density interval (lower and upper limit).
