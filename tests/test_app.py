@@ -135,22 +135,6 @@ def test_boris(tmp_path):
     write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
     write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
 
-    def _deconvolute(*args, **kwargs):
-        assert kwargs["ndraws"] == 1
-        assert kwargs["tune"] == 1
-        arr1 = np.ones(10)
-        arr2 = np.ones((2, 100, 10))
-        trace = arviz.from_dict({
-            "incident": arr2,
-            "folded": arr2,
-            "folded_plus_bg": arr2,
-            "incident_scaled_to_fep": arr2,
-        }, observed_data={
-            "spectrum_obs": arr1,
-            "background_obs": arr1,
-        })
-        return trace
-
     boris.app.boris(
         tmp_path / "rema.npz",
         tmp_path / "observed.npz",
@@ -158,12 +142,11 @@ def test_boris(tmp_path):
         1,
         2000,
         2200,
-        ndraws=1,
-        tune=1,
+        ndraws=10,
+        tune=10,
         thin=1,
-        burn=1,
+        burn=10,
         cores=1,
-        deconvolute=_deconvolute,
     )
     assert (tmp_path / "incident.npz").exists()
 
@@ -181,13 +164,12 @@ def test_boris(tmp_path):
         1,
         2000,
         2200,
-        ndraws=1,
-        tune=1,
+        ndraws=10,
+        tune=10,
         thin=1,
-        burn=1,
+        burn=10,
         cores=1,
         background_spectrum=tmp_path / "background.npz",
-        deconvolute=_deconvolute,
     )
     assert (tmp_path / "incident_bg.npz").exists()
 

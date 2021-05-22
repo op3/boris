@@ -25,6 +25,7 @@ import numpy as np
 import pymc3 as pm
 from arviz import InferenceData
 
+
 def deconvolute(
     rema: np.ndarray,
     spectrum: np.ndarray,

@@ -24,6 +24,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Generator, List, Mapping, Optional
 
+
 import numpy as np
 from tqdm import tqdm
 
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 def setup_logging():
     """Prepares logger, sets message format."""
+    logging.captureWarnings(True)
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
@@ -196,6 +198,9 @@ def boris(
             background_scale,
             **kwargs,
         )
+        import arviz
+
+        print(arviz.waic(trace, var_name="spectrum_obs"))
         trace.stack(sample=["chain", "draw"], inplace=True)
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
@@ -203,8 +208,7 @@ def boris(
         if background is not None:
             var_names += ["folded_plus_bg"]
         out = {
-            k: trace.posterior.get(k).T[burn::thin].values
-            for k in var_names
+            k: trace.posterior.get(k).T[burn::thin].values for k in var_names
         }
         out["spectrum"] = spectrum
         if background is not None:
