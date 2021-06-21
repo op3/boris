@@ -44,7 +44,7 @@ Topic :: Scientific/Engineering :: Physics
 
 setup(
     name="boris",
-    version="0.3.0",
+    version="0.4.0",
     description="Bayesian deconvolution of nuclear spectra",
     url="https://github.com/op3/boris",
     author="Oliver Papst",
