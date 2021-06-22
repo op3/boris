@@ -35,7 +35,7 @@ class MakeMatrixApp:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, make_matrix
 
-        setup_logging()
+        setup_logging(self.args.verbose)
         make_matrix(
             self.args.datfile,
             self.args.output_path,
@@ -48,7 +48,15 @@ class MakeMatrixApp:
 
     def parse_args(self, args: List[str]):
         """Parse makematrix command line."""
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(
+            description="Create a detector response matrix from multiple simulated spectra for different energies."
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            help="increase verbosity",
+            action="store_true",
+        )
         parser.add_argument(
             "--sim-dir",
             help="simulation file names are given relative to this directory (default: Directory containing datfile)",

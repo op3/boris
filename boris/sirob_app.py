@@ -35,7 +35,7 @@ class SirobApp:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, sirob
 
-        setup_logging()
+        setup_logging(self.args.verbose)
         sirob(
             self.args.matrixfile,
             self.args.incident_spectrum,
@@ -58,6 +58,12 @@ class SirobApp:
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            help="increase verbosity",
+            action="store_true",
         )
         parser.add_argument(
             "-l",

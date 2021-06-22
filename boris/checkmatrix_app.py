@@ -35,7 +35,7 @@ class CheckMatrixApp:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, check_matrix
 
-        setup_logging()
+        setup_logging(self.args.verbose)
         check_matrix(
             self.args.matrixfile,
             self.args.binning_factor,
@@ -49,6 +49,12 @@ class CheckMatrixApp:
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             description="Display detector response matrix."
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            help="increase verbosity",
+            action="store_true",
         )
         parser.add_argument(
             "matrixfile",

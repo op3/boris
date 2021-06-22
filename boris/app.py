@@ -42,10 +42,10 @@ from boris.utils import (
 logger = logging.getLogger(__name__)
 
 
-def setup_logging():
+def setup_logging(verbose=False):
     """Prepares logger, sets message format."""
     logging.captureWarnings(True)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
     logger.addHandler(ch)

@@ -37,7 +37,7 @@ class BorisApp:
         self.parse_args(sys.argv[1:])
         from boris.app import do_step, setup_logging, boris
 
-        setup_logging()
+        setup_logging(self.args.verbose)
         if self.args.seed:
             with do_step(
                 f"Setting numpy seed to {self.args.seed}", simple=True
@@ -71,6 +71,12 @@ class BorisApp:
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             description="Deconvolute observed_spectrum using using the supplied detector response matrix."
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            help="increase verbosity",
+            action="store_true",
         )
         parser.add_argument(
             "-l",

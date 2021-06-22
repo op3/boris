@@ -37,7 +37,7 @@ class Boris2SpecApp:
         self.parse_args(sys.argv[1:])
         from boris.app import setup_logging, boris2spec
 
-        setup_logging()
+        setup_logging(self.args.verbose)
         boris2spec(
             self.args.trace_file,
             self.args.output_path,
@@ -58,7 +58,14 @@ class Boris2SpecApp:
     def parse_args(self, args: List[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            description="Create spectra from boris trace files"
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            help="increase verbosity",
+            action="store_true",
         )
         parser.add_argument(
             "--var-names",
