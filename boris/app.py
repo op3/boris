@@ -166,6 +166,9 @@ def boris(
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
         )
+        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        logger.debug(f"Response matrix shape: {rema.shape}")
+        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
 
     rema_alt = None
     if matrix_alt:
@@ -175,6 +178,7 @@ def boris(
             rema_alt, rema_alt_bin_edges = get_rema(
                 matrix_alt, rema_name, binning_factor, left, right, norm_hist
             )
+            logger.debug(f"Alternative response matrix diagonal:\n{rema_alt.diagonal()}")
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -187,6 +191,7 @@ def boris(
             cal_bin_centers,
             cal_bin_edges,
         )
+        logger.debug(f"Observed spectrum:\n{spectrum}")
 
     background = None
     if background_spectrum is not None or background_name is not None:
@@ -201,6 +206,7 @@ def boris(
                 cal_bin_centers,
                 cal_bin_edges,
             )
+            logger.debug(f"Background spectrum:\n{background}")
 
     with do_step("🎲 Sampling from posterior distribution"):
         if deconvolute is None:
@@ -311,6 +317,9 @@ def sirob(
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
         )
+        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        logger.debug(f"Response matrix shape: {rema.shape}")
+        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -323,6 +332,7 @@ def sirob(
             cal_bin_centers,
             cal_bin_edges,
         )
+        logger.debug(f"Incident spectrum:\n{incident}")
 
     background = None
     if background_spectrum is not None or background_name is not None:
@@ -337,6 +347,8 @@ def sirob(
                 cal_bin_centers,
                 cal_bin_edges,
             )
+            logger.debug(f"Background spectrum:\n{background}")
+
 
     with do_step("Calculating observed (convoluted) spectrum"):
         observed = incident @ rema
@@ -398,7 +410,7 @@ def boris2spec(
     if output_path and not force_overwrite:
         check_if_exists(output_path)
 
-    logger.info(
+    logger.debug(
         "Available keys in trace_file: {}".format(
             ", ".join(get_keys_in_container(trace_file))
         )
@@ -566,6 +578,9 @@ def check_matrix(
         rema, rema_bin_edges = get_rema(
             matrix, rema_name, binning_factor, left, right, norm_hist
         )
+        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        logger.debug(f"Response matrix shape: {rema.shape}")
+        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
 
     plt.pcolormesh(
         rema_bin_edges,
