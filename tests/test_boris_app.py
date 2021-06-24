@@ -35,6 +35,7 @@ def test_BorisApp(tmp_path):
         "--binning-factor=1",
         "--tune=50",
         "--burn=50",
+        "--fit-beam",
         "--bg-spectrum",
         str(tmp_path / "background.npz"),
         "--matrixfile-alt",

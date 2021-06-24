@@ -25,8 +25,9 @@ from boris.core import deconvolute
 
 
 def test_deconvolute_mismatch():
+    bin_edges = np.linspace(0, 10, 11)
     rema = np.random.uniform((10, 10))
     spectrum = np.random.poisson(1000, size=10)
     background = np.random.poisson(1000, size=12)
     with pytest.raises(ValueError):
-        deconvolute(rema, spectrum.T, background.T)
+        deconvolute(rema, spectrum.T, bin_edges, background.T)

@@ -59,7 +59,7 @@ class Boris2SpecApp:
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description="Create spectra from boris trace files"
+            description="Create spectra from boris trace files",
         )
         parser.add_argument(
             "-v",

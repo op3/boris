@@ -30,6 +30,7 @@ from tqdm import tqdm
 
 from boris.utils import (
     create_matrix,
+    export_trace,
     get_keys_in_container,
     get_rema,
     get_quantities,
@@ -106,6 +107,7 @@ def boris(
     deconvolute: Optional[Callable[..., Mapping]] = None,
     thin: int = 1,
     burn: int = 1000,
+    fit_beam=False,
     **kwargs: Any,
 ) -> None:
     r"""
@@ -153,10 +155,11 @@ def boris(
         Path of container file containing alternative matrix
         that is used to create a linear combination of two
         matrices (interpolate between both matrices).
-    :param force_overwrite: Overwrite output_path if it exists.
+    :param force_overwrite: Overwrite ``incident_spectrum`` if it exists.
     :param deconvolute: Alternate function used for deconvolution.
     :param thin: Thinning factor to decrease autocorrelation time
     :param burn: Discard initial steps (burn-in time)
+    :param fit_beam: Perform fit of beam profile
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
     """
@@ -178,7 +181,9 @@ def boris(
             rema_alt, rema_alt_bin_edges = get_rema(
                 matrix_alt, rema_name, binning_factor, left, right, norm_hist
             )
-            logger.debug(f"Alternative response matrix diagonal:\n{rema_alt.diagonal()}")
+            logger.debug(
+                f"Alternative response matrix diagonal:\n{rema_alt.diagonal()}"
+            )
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
@@ -214,38 +219,21 @@ def boris(
         trace = deconvolute(
             rema,
             spectrum,
+            rema_bin_edges,
             background,
             background_scale,
             rema_alt,
+            fit_beam,
             **kwargs,
         )
-        import arviz
-
-        print(arviz.waic(trace, var_name="spectrum_obs"))
-        trace.stack(sample=["chain", "draw"], inplace=True)
-        
-        # TODO: Find better way to export this?
-        if matrix_alt is not None:
-            interpolation = trace.posterior.get("interpolation").T.values
-            interpolation_mean = np.mean(interpolation)
-            interpolation_std = np.std(interpolation)
-            logger.info(f"Interpolation parameter: {interpolation_mean} ± {interpolation_std}")
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
-        var_names = ["incident", "folded", "incident_scaled_to_fep"]
-        if background is not None:
-            var_names += ["folded_plus_bg"]
-        out = {
-            k: trace.posterior.get(k).T[burn::thin].values for k in var_names
-        }
-        out["spectrum"] = spectrum
-        if background is not None:
-            out["spectrum_background"] = background
-        write_hists(
-            out,
-            rema_bin_edges,
+        export_trace(
+            trace,
             incident_spectrum,
-            force_overwrite,
+            thin,
+            burn,
+            force_overwrite=force_overwrite,
         )
 
 
@@ -349,7 +337,6 @@ def sirob(
             )
             logger.debug(f"Background spectrum:\n{background}")
 
-
     with do_step("Calculating observed (convoluted) spectrum"):
         observed = incident @ rema
         if background is not None:
@@ -410,7 +397,7 @@ def boris2spec(
     if output_path and not force_overwrite:
         check_if_exists(output_path)
 
-    logger.debug(
+    logger.info(
         "Available keys in trace_file: {}".format(
             ", ".join(get_keys_in_container(trace_file))
         )

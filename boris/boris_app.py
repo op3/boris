@@ -65,6 +65,7 @@ class BorisApp:
             thin=self.args.thin,
             burn=self.args.burn,
             cores=self.args.cores,
+            fit_beam=self.args.fit_beam,
         )
 
     def parse_args(self, args: List[str]):
@@ -195,6 +196,11 @@ class BorisApp:
             help="number of samples to draw per core (default: %(default)s)",
             default=2000,
             type=int,
+        )
+        advanced.add_argument(
+            "--fit-beam",
+            help="Perform a fit of a beam profile (default: %(default)s)",
+            action="store_true",
         )
         parser.add_argument(
             "--force-overwrite",

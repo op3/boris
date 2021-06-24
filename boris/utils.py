@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
-from arviz import hdi
+from arviz import hdi, InferenceData
 
 logger = logging.getLogger(__name__)
 
@@ -894,3 +894,56 @@ def get_quantities(
         ).T
 
     return res, bin_edges
+
+
+def export_trace(
+    trace: InferenceData,
+    output_path: Path,
+    thin: int = 1,
+    burn: int = 1000,
+    **kwargs: Any,
+) -> None:
+    """
+    Export MCMC chain trace to file. Also writes (and prints) 1D
+    parameters.
+
+    :param trace: MCMC chain trace to export
+    :param output_path: Write MCMC chain trace to this file.
+    :param thin: Thinning factor to decrease autocorrelation time
+    :param burn: Discard initial steps (burn-in time)
+    :param \**kwargs:
+        Keyword arguments are passed to ``write_hists`` function.
+    """
+    bin_edges = trace.constant_data.bin_edges.values
+
+    out_hists = {
+        k: stat.T[burn::thin].values
+        for k, stat in trace.posterior.items()
+        if stat.shape[0] > 1
+    }
+    out_hists.update(
+        {k: stat.values for k, stat in trace.observed_data.items()}
+    )
+    out_params = {
+        k: stat.T[burn::thin].values
+        for k, stat in trace.posterior.items()
+        if stat.shape[0] == 1
+    }
+
+    for param, var in out_params.items():
+        logger.info(f"{param} parameter: {np.mean(var)} ± {np.std(var)}")
+
+    write_hists(
+        out_hists,
+        bin_edges,
+        output_path,
+        **kwargs,
+    )
+
+    if out_params:
+        np.savez_compressed(
+            output_path.parent / f"{output_path.stem}_params.npz", **out_params
+        )
+
+    # See https://github.com/pydata/xarray/issues/1077.
+    # trace.to_netcdf(str(incident_spectrum.parent / f"{incident_spectrum.stem}.nc"))

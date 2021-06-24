@@ -28,13 +28,13 @@ The `boris` command is provided to construct the MCMC chain:
 
 ```bash
 $ boris --help
-usage: boris [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
+usage: boris [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--rema-name [REMA_NAME]]
              [--norm-hist [NORM_HIST]] [--matrixfile-alt [MATRIXFILE_ALT]]
              [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
              [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN]
-             [-n NDRAWS] [--force-overwrite]
+             [-n NDRAWS] [--fit-beam] [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
 Deconvolute observed_spectrum using using the supplied detector response
@@ -47,6 +47,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -v, --verbose         increase verbosity
   -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
                         (default: 0)
   -r RIGHT, --right RIGHT
@@ -97,16 +98,17 @@ advanced arguments:
                         (default: 1000)
   -n NDRAWS, --ndraws NDRAWS
                         number of samples to draw per core (default: 2000)
+  --fit-beam            Perform a fit of a beam profile (default: False)
 ```
 
 A simple convolution of an incident spectrum using the response matrix can be performed using the `sirob` program:
 
 ```bash
 $ sirob --help
-usage: sirob [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
+usage: sirob [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
-             --cal-bin-edges C0 [C1 ...]] [--rema-name REMA_NAME]
+             --cal-bin-edges C0 [C1 ...]] [--rema-name [REMA_NAME]]
              [--norm-hist [NORM_HIST]] [--force-overwrite]
              matrixfile incident_spectrum observed_spectrum
 
@@ -117,6 +119,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -v, --verbose         increase verbosity (default: False)
   -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
                         (default: 0)
   -r RIGHT, --right RIGHT
@@ -141,7 +144,7 @@ optional arguments:
   --cal-bin-edges C0 [C1 ...]
                         Provide an energy calibration for the bin edges of the
                         incident spectrum, if bins are unknown (default: None)
-  --rema-name REMA_NAME
+  --rema-name [REMA_NAME]
                         Name of the detector response matrix in matrix file
                         (default: rema)
   --norm-hist [NORM_HIST]
@@ -285,6 +288,31 @@ optional arguments:
                         divide detector response matrix by this histogram (e.
                         g., to correct for number of simulated particles)
                         (optional) (default: None)
+```
+
+### Beam profile model
+
+During deconvolution, a fit of a beam profile can be applied.
+The following function is used for this purpose,
+which corresponds to a gaussian distribution with a left exponential tail:
+
+```python
+def beam_profile_model(x, pos, vol, sigma, tl):
+    tl *= sigma
+    dx = x - pos
+    norm = 1 / (
+        (sigma ** 2) / tl * np.exp(-(tl * tl) / (2.0 * sigma ** 2))
+        + np.sqrt(np.pi / 2.0) * sigma * (1 + np.math.erf(tl / (np.sqrt(2.0) * sigma)))
+    )
+    _x = np.piecewise(
+        dx,
+        [dx < -tl],
+        [
+            lambda dx: tl / (sigma ** 2) * (dx + tl / 2.0),
+            lambda dx: -dx * dx / (2.0 * sigma ** 2),
+        ],
+    )
+    return vol * norm * np.exp(_x)
 ```
 
 ## License
