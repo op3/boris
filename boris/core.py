@@ -184,6 +184,7 @@ def deconvolute(
         trace.add_groups({"constant_data": {"bin_edges": bin_edges}})
 
     for var_name in trace.observed_data.keys():
+        print(f"Calculate WAIC for {var_name}:")
         print(waic(trace, var_name=var_name))
     trace.stack(sample=["chain", "draw"], inplace=True)
 
