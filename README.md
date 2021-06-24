@@ -298,7 +298,7 @@ which corresponds to a gaussian distribution with a left exponential tail:
 
 ```python
 def beam_profile_model(x, pos, vol, sigma, tl):
-    tl *= sigma
+    tl = 1. / (tl * sigma)
     dx = x - pos
     norm = 1 / (
         (sigma ** 2) / tl * np.exp(-(tl * tl) / (2.0 * sigma ** 2))

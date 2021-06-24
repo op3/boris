@@ -41,7 +41,7 @@ def theuerkauf_norm(sigma, tl):
 
 
 def theuerkauf(x, pos, vol, sigma, tl):
-    tl *= sigma
+    tl = 1. / (tl * sigma)
     dx = x - pos
     norm = theuerkauf_norm(sigma, tl)
     _x = tt.switch(
@@ -134,7 +134,9 @@ def deconvolute(
                 shape=1,
             )
             beam_vol = pm.HalfFlat("beam_vol", shape=1)
-            beam_tl = pm.HalfFlat("beam_tl", shape=1)
+            
+            # L1 regularization
+            beam_tl = pm.Bound(pm.Laplace, lower=0.)("beam_tl", 0., 1., shape=1)
 
             beam_incident = pm.Deterministic(
                 "beam_incident",
