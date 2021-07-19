@@ -71,7 +71,7 @@ class BorisApp:
     def parse_args(self, args: List[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
-            description="Deconvolute observed_spectrum using using the supplied detector response matrix."
+            description="Deconvolute observed_spectrum using the supplied detector response matrix."
         )
         parser.add_argument(
             "-v",

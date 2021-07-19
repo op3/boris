@@ -37,7 +37,7 @@ usage: boris [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [-n NDRAWS] [--fit-beam] [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
-Deconvolute observed_spectrum using using the supplied detector response
+Deconvolute observed_spectrum using the supplied detector response
 matrix.
 
 positional arguments:
