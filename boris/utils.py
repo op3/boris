@@ -153,8 +153,6 @@ def write_hists(
         with uproot.recreate(
             output_path, compression=uproot.write.compress.LZMA(6)
         ) as f:
-            print(f.compression)
-            print(f.compression)
             for key, outspec in hists.items():
                 f[key] = numpy_to_root_hist(outspec, bin_edges)
     elif output_path.suffix == ".hdf5":
