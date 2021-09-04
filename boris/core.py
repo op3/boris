@@ -41,7 +41,7 @@ def theuerkauf_norm(sigma, tl):
 
 
 def theuerkauf(x, pos, vol, sigma, tl):
-    tl = 1. / (tl * sigma)
+    tl = 1.0 / (tl * sigma)
     dx = x - pos
     norm = theuerkauf_norm(sigma, tl)
     _x = tt.switch(
@@ -134,9 +134,11 @@ def deconvolute(
                 shape=1,
             )
             beam_vol = pm.HalfFlat("beam_vol", shape=1)
-            
+
             # L1 regularization
-            beam_tl = pm.Bound(pm.Laplace, lower=0.)("beam_tl", 0., 1., shape=1)
+            beam_tl = pm.Bound(pm.Laplace, lower=0.0)(
+                "beam_tl", 0.0, 1.0, shape=1
+            )
 
             beam_incident = pm.Deterministic(
                 "beam_incident",
@@ -152,10 +154,14 @@ def deconvolute(
             beam_folded = pm.Deterministic(
                 "beam_folded", tt.dot(beam_incident, rema_eff)
             )
-            beam_folded_plus_bg = pm.Deterministic(
-                "beam_folded_plus_bg",
-                beam_folded + background_scale * background_inc,
-            ) if background is not None else beam_folded
+            beam_folded_plus_bg = (
+                pm.Deterministic(
+                    "beam_folded_plus_bg",
+                    beam_folded + background_scale * background_inc,
+                )
+                if background is not None
+                else beam_folded
+            )
 
             beam_incident_scaled_to_fep = pm.Deterministic(
                 "beam_incident_scaled_to_fep", beam_incident * rema_eff_diag

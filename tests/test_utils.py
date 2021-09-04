@@ -40,7 +40,6 @@ from boris.utils import (
     get_rema,
     hdi,
     interpolate_grid,
-    numpy_to_root_hist,
     read_dat_file,
     read_pos_int_spectrum,
     read_rebin_spectrum,
@@ -69,44 +68,6 @@ def test__bin_edges_dict_2D():
     assert (d["bin_edges_0"] == bin_edges).all()
     assert (d["bin_edges_1"] == bin_edges).all()
     assert len(d) == 2
-
-
-@pytest.mark.skipif(
-    find_spec("uproot3") is None, reason="uproot3 not installed"
-)
-def test_numpy_to_root_hist_1D():
-    hist = np.random.uniform(size=10)
-    bin_edges = np.linspace(0, 10, 11)
-    res = numpy_to_root_hist(hist, bin_edges)
-    assert res._classname == b"TH1D"
-    assert np.isclose(res._fEntries, hist.sum())
-    assert res._fXaxis._fNbins == bin_edges.shape[0] - 1
-
-
-@pytest.mark.skipif(
-    find_spec("uproot3") is None, reason="uproot3 not installed"
-)
-def test_numpy_to_root_hist_2D():
-    hist = np.random.uniform(size=(10, 20))
-    bin_edges = [np.linspace(0, 10, 11), np.linspace(0, 20, 21)]
-    res = numpy_to_root_hist(hist, bin_edges)
-    assert res._classname == b"TH2D"
-    assert np.isclose(res._fEntries, hist.sum())
-    assert res._fXaxis._fNbins == bin_edges[0].shape[0] - 1
-    assert res._fYaxis._fNbins == bin_edges[1].shape[0] - 1
-
-
-@pytest.mark.skipif(
-    find_spec("uproot3") is None, reason="uproot3 not installed"
-)
-def test_numpy_to_root_hist_2D_trace():
-    hist = np.random.uniform(size=(100, 10))
-    bin_edges = np.linspace(0, 10, 11)
-    res = numpy_to_root_hist(hist, bin_edges)
-    assert res._classname == b"TH2D"
-    assert np.isclose(res._fEntries, hist.sum())
-    assert res._fXaxis._fNbins == 100
-    assert res._fYaxis._fNbins == bin_edges.shape[0] - 1
 
 
 @pytest.mark.parametrize(
@@ -647,13 +608,10 @@ def test_get_rema(tmp_path):
 
 
 def test_get_rema_unequal_binning(tmp_path):
-    import uproot3 as uproot
-    from uproot3_methods.classes import TH1, TH2
+    import uproot
 
-    rema = TH2.from_numpy(
-        [np.ones((10, 10)), np.linspace(0, 10, 11), np.linspace(0, 10, 11)]
-    )
-    hist_norm = TH1.from_numpy([np.ones(20), np.linspace(0, 20, 21)])
+    rema = (np.ones((10, 10)), np.linspace(0, 10, 11), np.linspace(0, 10, 11))
+    hist_norm = (np.ones(20), np.linspace(0, 20, 21))
     path = tmp_path / "rema.root"
     with uproot.recreate(path) as f:
         f["rema"] = rema

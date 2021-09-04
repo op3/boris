@@ -32,48 +32,6 @@ from arviz import hdi, InferenceData
 logger = logging.getLogger(__name__)
 
 
-def numpy_to_root_hist(
-    hist: np.ndarray,
-    bin_edges: Union[np.ndarray, Tuple[np.ndarray], List[np.ndarray]],
-) -> Any:
-    """
-    Converts numpy histogram with bin edges to root histogram (TH1 or TH2)
-
-    :param hist: numpy histogram (1D or 2D)
-    :param bin_edges:
-        numpy array or tuple of numpy arrays containing bin edges
-    :return: Root histogram with bin_edges
-    """
-    if hist.ndim == 1:
-        from uproot3_methods.classes.TH1 import from_numpy
-
-        h = from_numpy([hist, bin_edges])
-    else:
-        from uproot3_methods.classes.TH2 import from_numpy
-
-        if isinstance(bin_edges, (list, tuple)):
-            h = from_numpy([hist, *bin_edges])
-        else:
-            h = from_numpy([hist, np.arange(0, hist.shape[0] + 1), bin_edges])
-
-    # TODO: Is there a more elegant way to do this in uproot4?
-    for attr in [
-        "_fTSumwx",
-        "_fTsumwx2",
-        "_fTsumwy",
-        "_fTsumwy2",
-        "_fTsumwxy",
-        "_fTsumw",
-        "_fTsumw2",
-        "_fSumw2",
-    ]:
-        try:
-            delattr(h, attr)
-        except AttributeError:
-            pass
-    return h
-
-
 def _bin_edges_dict(
     bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
 ) -> Dict[str, np.ndarray]:
@@ -148,13 +106,14 @@ def write_hists(
         hists.update(_bin_edges_dict(bin_edges))
         np.savez_compressed(output_path, **hists)
     elif output_path.suffix == ".root":
-        import uproot3 as uproot
+        import uproot
 
-        with uproot.recreate(
-            output_path, compression=uproot.write.compress.LZMA(6)
-        ) as f:
+        with uproot.recreate(output_path, compression=uproot.LZMA(6)) as f:
             for key, outspec in hists.items():
-                f[key] = numpy_to_root_hist(outspec, bin_edges)
+                if outspec.ndim == 1:
+                    f[key] = (outspec, bin_edges)
+                elif outspec.ndim == 2:
+                    f[key] = (outspec, *bin_edges)
     elif output_path.suffix == ".hdf5":
         import h5py
 
