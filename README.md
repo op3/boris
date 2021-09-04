@@ -1,6 +1,6 @@
 # boris
 
-[![Build Status](https://travis-ci.com/op3/boris.svg?branch=master)](https://travis-ci.com/op3/boris)
+[![Build Status](https://travis-ci.com/op3/boris.svg?branch=master)](https://travis-ci.com/github/op3/boris)
 [![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
 [![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
