@@ -12,12 +12,29 @@ A (simulated) detector response matrix has to be provided.
 boris is programmed probabalistically using [PyMC3](https://docs.pymc.io/).
 A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast convergence and low autocorrelation times.
 
+## Features
+
+- Detector response matrix generation (`makematrix`)
+    - From individual spectra for different energies (e.g. from [Geant4](https://geant4.web.cern.ch/) simulations)
+    - Linear interpolation for missing energies
+    - Visualize detector response matrix to check correctness (`checkmatrix`)
+- Deconvolution of observed spectra using detector response matrix (`boris`)
+- Advanced treatment of uncertainties
+- Subtraction of background spectra with correct treatment of uncertainties
+- Supports reading and writing txt, numpy, hdf5 and root formats
+- Rebin and calibrate input spectra
+- Supply two detector response matrices and find the best interpolation between the two
+    - Useful if additional unknown degree of freedom, such as detector offset, is present
+- Directly fit gaussian beam profile model (with left tail) to extract beam properties
+- Extract (and plot) statistical summary spectra such as mean or standard deviation from MCMC-traces (`boris2spec`)
+- Convolute spectrum with detector response matrix (`sirob`)
+
 ## Requirements
 
 * Python>=3.8
 * [numpy](https://numpy.org/)
-* [PyMC3](https://docs.pymc.io/)
-* [uproot](https://github.com/scikit-hep/uproot4) (*optional, for reading and writing root files*)
+* [PyMC3](https://docs.pymc.io/)>=3.9
+* [uproot](https://github.com/scikit-hep/uproot4)>=4.1 (*optional, for reading and writing root files*)
 * [h5py](https://www.h5py.org/) (*optional, for reading and writing hdf5 files*)
 * [matplotlib](https://matplotlib.org/) (*optional, for plotting results*)
 

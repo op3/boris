@@ -1,6 +1,6 @@
 numpy
 h5py
-pymc3
+pymc3>=3.9.0
 arviz>=0.10.0
 tqdm
-uproot
+uproot>=4.1

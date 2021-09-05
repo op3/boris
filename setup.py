@@ -21,7 +21,7 @@ spectroscopy
 """
 
 CLASSIFIERS = """\
-Development Status :: 4 - Beta
+Development Status :: 5 - Production/Stable
 Environment :: Console
 Intended Audience :: Information Technology
 Intended Audience :: Science/Research
@@ -37,6 +37,7 @@ Programming Language :: Python
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
 Topic :: Scientific/Engineering
 Topic :: Scientific/Engineering :: Information Analysis
 Topic :: Scientific/Engineering :: Physics
@@ -44,7 +45,7 @@ Topic :: Scientific/Engineering :: Physics
 
 setup(
     name="boris",
-    version="0.4.0",
+    version="1.0.0",
     description="Bayesian deconvolution of nuclear spectra",
     url="https://github.com/op3/boris",
     author="Oliver Papst",
@@ -57,10 +58,10 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "numpy",
-        "pymc3",
+        "pymc3>=3.9.0",
         "arviz>=0.10.0",
         "tqdm",
-        "uproot",
+        "uproot>=4.1.0",
     ],
     entry_points={
         "console_scripts": [
