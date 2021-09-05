@@ -1,6 +1,7 @@
 # boris
 
-[![Build Status](https://travis-ci.com/op3/boris.svg?branch=master)](https://travis-ci.com/github/op3/boris)
+[![Test Status](https://img.shields.io/github/workflow/status/op3/boris/Tests/master?label=tests)](https://github.com/op3/boris/actions/workflows/run-tests.yml)
+[![Code Style](https://img.shields.io/github/workflow/status/op3/boris/Code%20Formatting/master?label=style)](https://github.com/op3/boris/actions/workflows/check-code-formatting.yml)
 [![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
 [![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
