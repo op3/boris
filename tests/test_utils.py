@@ -177,6 +177,14 @@ def test_write_hists_2D(tmp_path, filename):
     assert (tmp_path / filename).exists()
 
 
+def test_write_hists_trace(tmp_path):
+    filename = "trace.root"
+    hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
+    bin_edges = np.linspace(0, 200, 201)
+    write_hists(hists, bin_edges, tmp_path / filename)
+    assert (tmp_path / filename).exists()
+
+
 def test_write_hists_unknown_format(tmp_path):
     hists = {f"hist{i}": np.random.uniform(size=(100, 200)) for i in range(4)}
     bin_edges = [np.linspace(0, 100, 101), np.linspace(0, 200, 201)]

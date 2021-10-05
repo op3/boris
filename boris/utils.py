@@ -110,10 +110,18 @@ def write_hists(
 
         with uproot.recreate(output_path, compression=uproot.LZMA(6)) as f:
             for key, outspec in hists.items():
-                if outspec.ndim == 1:
-                    f[key] = (outspec, bin_edges)
-                elif outspec.ndim == 2:
-                    f[key] = (outspec, *bin_edges)
+                if isinstance(bin_edges, (tuple, list)):
+                    out = (outspec, *bin_edges)
+                    f[key] = out
+                else:
+                    if outspec.ndim == 2:
+                        f[key] = (
+                            outspec,
+                            np.arange(outspec.shape[0] + 1),
+                            bin_edges,
+                        )
+                    else:
+                        f[key] = (outspec, bin_edges)
     elif output_path.suffix == ".hdf5":
         import h5py
 
@@ -901,6 +909,3 @@ def export_trace(
         np.savez_compressed(
             output_path.parent / f"{output_path.stem}_params.npz", **out_params
         )
-
-    # See https://github.com/pydata/xarray/issues/1077.
-    # trace.to_netcdf(str(incident_spectrum.parent / f"{incident_spectrum.stem}.nc"))
