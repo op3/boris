@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 def theuerkauf_norm(sigma, tl):
     return 1 / (
-        (sigma ** 2) / tl * tt.exp(-(tl * tl) / (2.0 * sigma ** 2))
+        (sigma**2) / tl * tt.exp(-(tl * tl) / (2.0 * sigma**2))
         + tt.sqrt(np.pi / 2.0)
         * sigma
         * (1 + tt.erf(tl / (tt.sqrt(2.0) * sigma)))
@@ -46,8 +46,8 @@ def theuerkauf(x, pos, vol, sigma, tl):
     norm = theuerkauf_norm(sigma, tl)
     _x = tt.switch(
         dx < -tl,
-        tl / (sigma ** 2) * (dx + tl / 2.0),
-        -dx * dx / (2.0 * sigma ** 2),
+        tl / (sigma**2) * (dx + tl / 2.0),
+        -dx * dx / (2.0 * sigma**2),
     )
     return vol * norm * tt.exp(_x)
 
