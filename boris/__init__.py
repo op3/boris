@@ -1,3 +1,5 @@
+from ._version import __version__
+
 from .app import *
 from .boris_app import *
 from .boris2spec_app import *
