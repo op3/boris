@@ -43,6 +43,9 @@ class Boris2SpecApp:
             self.args.output_path,
             self.args.var_names,
             self.args.plot,
+            self.args.plot_title,
+            self.args.plot_xlabel,
+            self.args.plot_ylabel,
             self.args.get_mean,
             self.args.get_median,
             # self.args.get_mode,
@@ -81,7 +84,22 @@ class Boris2SpecApp:
             nargs="?",
             const="",
             default=None,
-            metavar="OUTPUT"
+            metavar="OUTPUT",
+        )
+        parser.add_argument(
+            "--plot-title",
+            help="Set plot title",
+            type=str,
+        )
+        parser.add_argument(
+            "--plot-xlabel",
+            help="Set plot x-axis label",
+            type=str,
+        )
+        parser.add_argument(
+            "--plot-ylabel",
+            help="Set plot y-axis label",
+            type=str,
         )
         parser.add_argument(
             "--get-mean",

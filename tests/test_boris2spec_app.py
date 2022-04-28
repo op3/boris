@@ -92,6 +92,7 @@ def test_Boris2SpecApp_plot(mock_plt, tmp_path):
     Boris2SpecApp()
     assert mock_plt.called
 
+
 @mock.patch("matplotlib.pyplot.savefig")
 def test_Boris2SpecApp_plot_export(mock_plt, tmp_path):
     incident = np.ones((100, 10))
@@ -112,6 +113,12 @@ def test_Boris2SpecApp_plot_export(mock_plt, tmp_path):
         "--get-hdi",
         "--plot",
         str(tmp_path / "output.png"),
+        "--plot-title",
+        "Plot Title",
+        "--plot-xlabel",
+        "Energy (keV)",
+        "--plot-ylabel",
+        "Counts",
         str(tmp_path / "incident.npz"),
     ]
     Boris2SpecApp()

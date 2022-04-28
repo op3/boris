@@ -357,6 +357,9 @@ def boris2spec(
     output_path: Optional[Path] = None,
     var_names: Optional[List[str]] = None,
     plot: Optional[str] = None,
+    plot_title: Optional[str] = None,
+    plot_xlabel: Optional[str] = None,
+    plot_ylabel: Optional[str] = None,
     get_mean: bool = False,
     get_median: bool = False,
     # get_mode: bool = False,
@@ -474,6 +477,12 @@ def boris2spec(
 
         plt.ylim(0, None)
         plt.xlim(bin_edges[0], bin_edges[-1])
+        if plot_title:
+            plt.title(plot_title)
+        if plot_xlabel:
+            plt.xlabel(plot_xlabel)
+        if plot_ylabel:
+            plt.ylabel(plot_ylabel)
         plt.legend()
         plt.tight_layout()
         if plot == "":
