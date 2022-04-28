@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
 
 
 class CheckMatrixApp:
@@ -45,7 +44,7 @@ class CheckMatrixApp:
             self.args.norm_hist,
         )
 
-    def parse_args(self, args: List[str]):
+    def parse_args(self, args: list[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             description="Display detector response matrix."

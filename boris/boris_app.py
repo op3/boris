@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
 
 import numpy as np
 
@@ -68,7 +67,7 @@ class BorisApp:
             fit_beam=self.args.fit_beam,
         )
 
-    def parse_args(self, args: List[str]):
+    def parse_args(self, args: list[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             description="Deconvolute observed_spectrum using the supplied detector response matrix."

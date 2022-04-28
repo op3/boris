@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Any, Callable, Generator, List, Mapping, Optional
 
 
-import numpy as np
 from tqdm import tqdm
 
 from boris.utils import (
@@ -34,6 +33,7 @@ from boris.utils import (
     get_keys_in_container,
     get_rema,
     get_quantities,
+    one_sigma,
     read_dat_file,
     read_rebin_spectrum,
     write_hist,
@@ -78,7 +78,7 @@ def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
 
 def check_if_exists(path: Path):
     """
-    checks if path already exists
+    Check if path already exists
 
     :param path: Path to check for
     :raises Exception: if path exists
@@ -368,7 +368,7 @@ def boris2spec(
     get_min: bool = False,
     get_max: bool = False,
     get_hdi: bool = False,
-    hdi_prob: float = np.math.erf(np.sqrt(0.5)),
+    hdi_prob: float = one_sigma,
     force_overwrite: bool = False,
 ) -> None:
     """

@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 def theuerkauf_norm(sigma, tl):
+    """
+    Normalization factor for Theuerkauf peak shape
+    """
     return 1 / (
         (sigma**2) / tl * tt.exp(-(tl * tl) / (2.0 * sigma**2))
         + tt.sqrt(np.pi / 2.0)
@@ -41,6 +44,12 @@ def theuerkauf_norm(sigma, tl):
 
 
 def theuerkauf(x, pos, vol, sigma, tl):
+    """
+    Theuerkauf peak shape model with left tail
+
+    For numerical reasons, the parameter ``tl`` is the inverse of its usual
+    definition.
+    """
     tl = 1.0 / (tl * sigma)
     dx = x - pos
     norm = theuerkauf_norm(sigma, tl)
@@ -63,7 +72,7 @@ def deconvolute(
     ndraws: int = 10000,
     **kwargs,
 ) -> InferenceData:
-    """
+    r"""
     Generates a MCMC chain, deconvolutes spectrum using response matrix.
 
     :param rema: Response matrix of the detector
@@ -92,7 +101,7 @@ def deconvolute(
     incident_start = np.clip(spectrum_wobg @ np.linalg.inv(rema), 1, np.inf)
     incident_normalization = 1 / np.mean(incident_start)
 
-    with pm.Model() as model:
+    with pm.Model():
         # Model parameter
         incident = pm.Exponential(
             "incident", incident_normalization, shape=spectrum.shape[0]
@@ -119,9 +128,7 @@ def deconvolute(
                 "folded_plus_bg", folded + background_scale * background_inc
             )
 
-        incident_scaled_to_fep = pm.Deterministic(
-            "incident_scaled_to_fep", incident * rema_eff_diag
-        )
+        pm.Deterministic("incident_scaled_to_fep", incident * rema_eff_diag)
 
         if fit_beam:
             beam_pos = pm.Uniform(
@@ -163,7 +170,7 @@ def deconvolute(
                 else beam_folded
             )
 
-            beam_incident_scaled_to_fep = pm.Deterministic(
+            pm.Deterministic(
                 "beam_incident_scaled_to_fep", beam_incident * rema_eff_diag
             )
 

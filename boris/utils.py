@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Mapping
 
 import numpy as np
 from arviz import hdi, InferenceData
@@ -32,9 +32,12 @@ from arviz import hdi, InferenceData
 logger = logging.getLogger(__name__)
 
 
+one_sigma = np.math.erf(np.sqrt(0.5))
+
+
 def _bin_edges_dict(
-    bin_edges: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray]],
-) -> Dict[str, np.ndarray]:
+    bin_edges: np.ndarray | list[np.ndarray] | tuple[np.ndarray],
+) -> dict[str, np.ndarray]:
     """
     Creates dictionary of multiple bin_edges arrays for file formats
     that don’t support explicitly writing bin_edges.
@@ -57,7 +60,7 @@ def write_hist(
     histfile: Path,
     name: str,
     hist: np.ndarray,
-    bin_edges: Union[np.ndarray, List[np.ndarray]],
+    bin_edges: np.ndarray | list[np.ndarray],
     force_overwrite: bool = False,
 ) -> None:
     """
@@ -72,8 +75,8 @@ def write_hist(
 
 
 def write_hists(
-    hists: Dict[str, np.ndarray],
-    bin_edges: Union[np.ndarray, List[np.ndarray]],
+    hists: dict[str, np.ndarray],
+    bin_edges: np.ndarray | list[np.ndarray],
     output_path: Path,
     force_overwrite: bool = False,
 ) -> None:
@@ -138,7 +141,7 @@ def write_hists(
         raise Exception(f"File format {output_path.suffix} not supported.")
 
 
-def get_filetype(path: Path) -> Optional[str]:
+def get_filetype(path: Path) -> str | None:
     """
     Determines file format of path using magic bytes.
     Supports root-files, hdf5 and non-empty zip-files (used by npz).
@@ -157,7 +160,7 @@ def get_filetype(path: Path) -> Optional[str]:
 
 def get_bin_edges(
     hist: np.ndarray,
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Trys to determine if 2D hist contains column(s) with binning information.
 
@@ -196,9 +199,7 @@ def get_bin_edges(
     )
 
 
-def get_obj_by_name(
-    mapping: Mapping[str, Any], name: Optional[str] = None
-) -> Any:
+def get_obj_by_name(mapping: Mapping[str, Any], name: str | None = None) -> Any:
     """
     Returns object from mapping.
 
@@ -219,7 +220,7 @@ def get_obj_by_name(
     raise KeyError("Please provide name of object")
 
 
-def get_obj_bin_edges(mapping: Mapping[str, Any]) -> List[np.ndarray]:
+def get_obj_bin_edges(mapping: Mapping[str, Any]) -> list[np.ndarray]:
     """
     Returns bin edges from mapping.
 
@@ -229,14 +230,14 @@ def get_obj_bin_edges(mapping: Mapping[str, Any]) -> List[np.ndarray]:
     if "bin_edges" in mapping:
         return [mapping["bin_edges"]]
     bin_edges_keys = sorted(
-        [key for key in mapping.keys() if key.startswith("bin_edges_")]
+        key for key in mapping.keys() if key.startswith("bin_edges_")
     )
     if bin_edges_keys:
         return [mapping[key] for key in bin_edges_keys]
     raise KeyError("Object does not contain bin_edges.")
 
 
-def get_keys_in_container(path: Path) -> List[str]:
+def get_keys_in_container(path: Path) -> list[str]:
     """
     Returns all keys that are available in a container.
 
@@ -262,9 +263,9 @@ def get_keys_in_container(path: Path) -> List[str]:
 
 def read_spectrum(
     spectrum: Path,
-    histname: Optional[str] = None,
+    histname: str | None = None,
     extract_bin_edges: bool = True,
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Reads spectrum to numpy array.
 
@@ -315,11 +316,11 @@ def read_spectrum(
 
 def read_pos_int_spectrum(
     path: Path,
-    histname: Optional[str] = None,
+    histname: str | None = None,
     extract_bin_edges: bool = True,
     rtol: float = 1e-05,
     atol: float = 1e-08,
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Reads spectrum to numpy array of type np.integer. The spectrum must
     not contain negative bins.
@@ -359,11 +360,11 @@ def read_pos_int_spectrum(
 def read_rebin_spectrum(
     path: Path,
     bin_edges_rebin: np.ndarray,
-    histname: Optional[str] = None,
-    cal_bin_centers: Optional[List[float]] = None,
-    cal_bin_edges: Optional[List[float]] = None,
-    filter_spectrum: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+    histname: str | None = None,
+    cal_bin_centers: list[float] | None = None,
+    cal_bin_edges: list[float] | None = None,
+    filter_spectrum: Callable[[np.ndarray], np.ndarray] | None = None,
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Reads and rebin spectrum.
 
@@ -412,7 +413,7 @@ def reduce_binning(
     binning_factor: int,
     left: float = 0.0,
     right: float = np.inf,
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """
     Crops bin_edges to left and right and reduces the binning by
     binning_factor. Both left and right are included in the resulting axis.
@@ -443,10 +444,10 @@ def reduce_binning(
 def rebin_hist(
     hist: np.ndarray,
     binning_factor: int,
-    bin_edges: Optional[np.ndarray] = None,
+    bin_edges: np.ndarray | None = None,
     left: float = -np.inf,
     right: float = np.inf,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Rebins hist with dimension $N^M$.
 
@@ -523,8 +524,8 @@ def rebin_uniform(
 def load_rema(
     path: Path,
     hist_rema: str,
-    hist_norm: Optional[str] = None,
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+    hist_norm: str | None = None,
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Loads detector response matrix from file.
 
@@ -564,8 +565,8 @@ def get_rema(
     binning_factor: int,
     left: int,
     right: int,
-    hist_norm: Optional[str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    hist_norm: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Obtains the response matrix from container file, optionally applying
     a normalization. Crops response matrix to ``left``and ``right`` and
@@ -630,8 +631,8 @@ class SimInfo:
 
 
 def read_dat_file(
-    dat_file_path: Path, sim_root: Optional[Path] = None
-) -> List[SimInfo]:
+    dat_file_path: Path, sim_root: Path | None = None
+) -> list[SimInfo]:
     """Reads and parses datfile.
 
     :param dat_file_path: Path to datfile.
@@ -657,7 +658,7 @@ class SimSpec(SimInfo):
     def __init__(
         self,
         path: Path,
-        detector: Optional[str],
+        detector: str | None,
         energy: float,
         nevents: int,
         scale: float = 1.0,
@@ -697,9 +698,10 @@ class SimSpec(SimInfo):
 
 def interpolate_grid(
     grid: np.ndarray, point: float
-) -> List[Tuple[int, float, float]]:
+) -> list[tuple[int, float, float]]:
     """
-    Creates a linear interpolation to ̀ `point`` given a 1D-grid.
+    Create a linear interpolation to ̀ `point`` given a 1D-grid
+
     Finds the two closest grid points and assigns weights corresponding
     to the distance to the point. Uses only one grid point if ``point``
     is outside the grid.
@@ -721,14 +723,14 @@ def interpolate_grid(
 
 
 def create_matrix(
-    simulations: List[SimInfo],
-    detector: Optional[str],
-    max_energy: Optional[float] = None,
+    simulations: list[SimInfo],
+    detector: str | None,
+    max_energy: float | None = None,
     scale_hist_axis: float = 1e3,
     normalize: bool = True,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Creates detector response matrix.
+    Create detector response matrix
 
     :param simulations:
         List of simulations used to create the detector response matrix.
@@ -744,7 +746,6 @@ def create_matrix(
         Divide matrix by number of simulated particles.
     :return: Detector response matrix and bin edges for both axes.
     """
-
     specs = {
         sim.energy: SimSpec(
             sim.path,
@@ -801,8 +802,8 @@ def get_quantities(
     get_min: bool = False,
     get_max: bool = False,
     get_hdi: bool = False,
-    hdi_prob: float = np.math.erf(np.sqrt(0.5)),
-) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    hdi_prob: float = one_sigma,
+) -> tuple[dict[str, np.ndarray], np.ndarray]:
     """
     Creates and/or plots spectra from boris trace file.
 

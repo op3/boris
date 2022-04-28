@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
 
 
 class SirobApp:
@@ -54,7 +53,7 @@ class SirobApp:
             self.args.force_overwrite,
         )
 
-    def parse_args(self, args: List[str]):
+    def parse_args(self, args: list[str]):
         """Parse CLI arguments."""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter

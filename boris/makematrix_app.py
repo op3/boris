@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
 
 
 class MakeMatrixApp:
@@ -46,7 +45,7 @@ class MakeMatrixApp:
             self.args.force_overwrite,
         )
 
-    def parse_args(self, args: List[str]):
+    def parse_args(self, args: list[str]):
         """Parse makematrix command line."""
         parser = argparse.ArgumentParser(
             description="Create a detector response matrix from multiple simulated spectra for different energies."
