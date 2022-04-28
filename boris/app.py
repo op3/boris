@@ -356,7 +356,7 @@ def boris2spec(
     trace_file: Path,
     output_path: Optional[Path] = None,
     var_names: Optional[List[str]] = None,
-    plot: bool = False,
+    plot: Optional[str] = None,
     get_mean: bool = False,
     get_median: bool = False,
     # get_mode: bool = False,
@@ -377,7 +377,9 @@ def boris2spec(
         Path of container file which is created containing the generated
         spectra (optional).
     :param var_names: Name of variables that are evaluated.
-    :param plot: Display matplotlib window of all spectra (optional).
+    :param plot: Generate matplotlib window of all spectra (optional). The
+        plot is displayed interactively unless a filename (different from `""`)
+        is given.
     :param get_mean: Generate spectrum containing mean of each bin.
     :param get_median: Generate spectrum containing median of each bin.
     :param get_variance: Generate spectrum containing variane of each bin.
@@ -425,7 +427,7 @@ def boris2spec(
     if output_path and res and bin_edges is not None:
         write_hists(res, bin_edges, output_path, force_overwrite)
 
-    if plot:
+    if plot is not None:
         import matplotlib.pyplot as plt
 
         bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
@@ -474,7 +476,10 @@ def boris2spec(
         plt.xlim(bin_edges[0], bin_edges[-1])
         plt.legend()
         plt.tight_layout()
-        plt.show()
+        if plot == "":
+            plt.show()
+        else:
+            plt.savefig(plot)
 
 
 def make_matrix(

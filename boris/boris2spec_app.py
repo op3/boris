@@ -76,8 +76,12 @@ class Boris2SpecApp:
         )
         parser.add_argument(
             "--plot",
-            help="Display a matplotlib plot of the queried spectra",
-            action="store_true",
+            help="Generate a matplotlib plot of the queried spectra. The plot is displayed interactively unless an output filename is given.",
+            type=str,
+            nargs="?",
+            const="",
+            default=None,
+            metavar="OUTPUT"
         )
         parser.add_argument(
             "--get-mean",
@@ -144,7 +148,7 @@ class Boris2SpecApp:
         )
 
         self.args = parser.parse_args(args)
-        if not self.args.plot and self.args.output_path is None:
+        if self.args.plot is None and self.args.output_path is None:
             parser.error("Please specify output_path and/or use --plot option")
 
         if not (

@@ -86,6 +86,32 @@ def test_Boris2SpecApp_plot(mock_plt, tmp_path):
         "--get-mean",
         "--get-hdi",
         "--plot",
+        "--",
+        str(tmp_path / "incident.npz"),
+    ]
+    Boris2SpecApp()
+    assert mock_plt.called
+
+@mock.patch("matplotlib.pyplot.savefig")
+def test_Boris2SpecApp_plot_export(mock_plt, tmp_path):
+    incident = np.ones((100, 10))
+    other = np.ones(10)
+    bin_edges = np.linspace(2000, 2200, 11)
+    write_hists(
+        {"incident": incident, "spectrum": other},
+        bin_edges,
+        tmp_path / "incident.npz",
+    )
+
+    sys.argv = [
+        "boris2spec",
+        "--var-names",
+        "incident",
+        "spectrum",
+        "--get-mean",
+        "--get-hdi",
+        "--plot",
+        str(tmp_path / "output.png"),
         str(tmp_path / "incident.npz"),
     ]
     Boris2SpecApp()
