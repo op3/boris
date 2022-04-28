@@ -876,7 +876,7 @@ def export_trace(
     :param output_path: Write MCMC chain trace to this file.
     :param thin: Thinning factor to decrease autocorrelation time
     :param burn: Discard initial steps (burn-in time)
-    :param \**kwargs:
+    :param **kwargs:
         Keyword arguments are passed to ``write_hists`` function.
     """
     bin_edges = trace.constant_data.bin_edges.values
