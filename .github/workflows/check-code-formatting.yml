@@ -14,3 +14,13 @@ jobs:
         run: pip install black && black --version
       - name: Run black
         run: black --check .
+  flake8-lint:
+    runs-on: ubuntu-latest
+    name: flake8 lint
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - name: flake8 lint
+        uses: py-actions/flake8@v2
