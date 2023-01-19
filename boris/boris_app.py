@@ -42,6 +42,9 @@ class BorisApp:
                 f"Setting numpy seed to {self.args.seed}", simple=True
             ):
                 np.random.seed(int(self.args.seed))
+
+        calibration = self.args.cal_bin_edges or self.args.cal_bin_centers
+        convention = "centers" if self.args.cal_bin_centers else "edges"
         boris(
             self.args.matrixfile,
             self.args.observed_spectrum,
@@ -54,15 +57,12 @@ class BorisApp:
             self.args.bg_spectrum,
             self.args.bg_hist,
             self.args.bg_scale,
-            self.args.cal_bin_centers,
-            self.args.cal_bin_edges,
-            self.args.norm_hist,
+            calibration,
+            convention,
             self.args.matrixfile_alt,
             self.args.force_overwrite,
             ndraws=self.args.ndraws,
             tune=self.args.tune,
-            thin=self.args.thin,
-            burn=self.args.burn,
             cores=self.args.cores,
             fit_beam=self.args.fit_beam,
         )
@@ -81,14 +81,14 @@ class BorisApp:
         parser.add_argument(
             "-l",
             "--left",
-            help="lower edge of first bin of deconvoluted spectrum (default: %(default)s)",
+            help="crop spectrum to the lowest bin still containing LEFT (default: %(default)s)",
             type=float,
             default=0,
         )
         parser.add_argument(
             "-r",
             "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum (default: maximum energy of simulation)",
+            help="crop spectrum to the highest bin not containing RIGHT (default: maximum energy of simulation)",
             type=float,
             default=None,
         )
@@ -132,13 +132,6 @@ class BorisApp:
             type=str,
         )
         parser.add_argument(
-            "--norm-hist",
-            help="divide detector response matrix by this histogram (e. g., to correct for number of simulated particles) (optional) (default: %(default)s)",
-            nargs="?",
-            default=None,
-            type=str,
-        )
-        parser.add_argument(
             "--matrixfile-alt",
             help="Load an additional detector response matrix from this matrix file (same rema-name as main matrix). Boris will create a linear combination of the main matrixfile and the alternative matrix file. (default: %(default)s)",
             nargs="?",
@@ -172,20 +165,8 @@ class BorisApp:
             type=int,
         )
         advanced.add_argument(
-            "--thin",
-            help="thin the resulting trace by a factor (default: %(default)s)",
-            default=1,
-            type=int,
-        )
-        advanced.add_argument(
             "--tune",
             help="number of initial steps used to tune the model (default: %(default)s)",
-            default=1000,
-            type=int,
-        )
-        advanced.add_argument(
-            "--burn",
-            help="number of initial steps to discard (burn-in phase) (default: %(default)s)",
             default=1000,
             type=int,
         )

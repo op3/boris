@@ -40,7 +40,6 @@ class MakeMatrixApp:
             self.args.output_path,
             self.args.detector,
             self.args.max_energy,
-            self.args.scale_hist_axis,
             self.args.sim_dir,
             self.args.force_overwrite,
         )
@@ -60,12 +59,6 @@ class MakeMatrixApp:
             "--sim-dir",
             help="simulation file names are given relative to this directory (default: Directory containing datfile)",
             type=Path,
-        )
-        parser.add_argument(
-            "--scale-hist-axis",
-            help="Scale energy axis of histograms in case a different unit is used by the simulation (default: 1.0)",
-            default=1.0,
-            type=float,
         )
         parser.add_argument(
             "--detector",

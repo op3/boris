@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: GPL-3.0+
 #
-# Copyright © 2020–2021 O. Papst.
+# Copyright © 2020–2023 O. Papst.
 #
 # This file is part of boris.
 #
@@ -22,349 +22,48 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from collections import namedtuple
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Mapping, Literal
 
 import numpy as np
-from arviz import hdi, InferenceData
+import numpy.typing as npt
+import hist
+from arviz import hdi
+
+from boris.io import read_spectrum, load_rema
 
 logger = logging.getLogger(__name__)
-
 
 one_sigma = np.math.erf(np.sqrt(0.5))
 
 
-def _bin_edges_dict(
-    bin_edges: np.ndarray | list[np.ndarray] | tuple[np.ndarray],
-) -> dict[str, np.ndarray]:
+def get_bin_edges_from_calibration(
+    num_bins: int,
+    calibration: np.ndarray,
+    convention: Literal["edges", "centers"] = "edges",
+) -> np.ndarray:
     """
-    Creates dictionary of multiple bin_edges arrays for file formats
-    that don’t support explicitly writing bin_edges.
+    Calculate bin edges array from energy calibration
 
-    :param bin_edges: array or list/tuple of arrays containing bin_edges.
-    :return:
-        Dictionary of bin_edges arrays that can be included in a
-        container file.
+    :param num_bins: Number of bins in corresponding histogram
+    :param calibration: Coefficients of calibration polynomial
+    :param convention: If calibration applies to bin `edges` or bin `centers`
+    :return: Bin edges array
     """
-    if isinstance(bin_edges, (list, tuple)):
-        return {
-            f"bin_edges_{i}": bin_edges_i
-            for i, bin_edges_i in enumerate(bin_edges)
-        }
-    else:
-        return {"bin_edges": bin_edges}
-
-
-def write_hist(
-    histfile: Path,
-    name: str,
-    hist: np.ndarray,
-    bin_edges: np.ndarray | list[np.ndarray],
-    force_overwrite: bool = False,
-) -> None:
-    """
-    Writes single histogram to file.
-    :param histfile: Path of created container file.
-    :param name: Name of histogram in container file.
-    :param hist: Histogram.
-    :param bin_edges: Bin edges.
-    :param force_overwrite: Overwrite output_path if it exists.
-    """
-    return write_hists({name: hist}, bin_edges, histfile, force_overwrite)
-
-
-def write_hists(
-    hists: dict[str, np.ndarray],
-    bin_edges: np.ndarray | list[np.ndarray],
-    output_path: Path,
-    force_overwrite: bool = False,
-) -> None:
-    """
-    Writes multiple histograms to file.
-
-    :param hists: Dictionary of histograms.
-    :param bin_edges: Bin edges, assumed to be equal for all histograms.
-    :param output_path: Path of created container file.
-    :param force_overwrite: Overwrite output_path if it exists.
-    """
-    if not force_overwrite and output_path.exists():
-        raise Exception(f"Error writing {output_path}, already exists.")
-    if not output_path.parent.exists():
-        output_path.parent.mkdir(parents=True)
-    if output_path.suffix == ".txt":
-        for hist in hists.values():
-            if hist.ndim != 1:
-                raise Exception(
-                    f"Writing {hist.ndim}-dimensional histograms to txt not supported."
-                )
-        np.savetxt(
-            output_path,
-            np.array([bin_edges[:-1], bin_edges[1:], *hists.values()]).T,
-            header=", ".join(
-                ["bin_edges_lo", "bin_edges_hi"] + list(hists.keys())
-            ),
-        )
-    elif output_path.suffix == ".npz":
-        hists.update(_bin_edges_dict(bin_edges))
-        np.savez_compressed(output_path, **hists)
-    elif output_path.suffix == ".root":
-        import uproot
-
-        with uproot.recreate(output_path, compression=uproot.LZMA(6)) as f:
-            for key, outspec in hists.items():
-                if isinstance(bin_edges, (tuple, list)):
-                    out = (outspec, *bin_edges)
-                    f[key] = out
-                else:
-                    if outspec.ndim == 2:
-                        f[key] = (
-                            outspec,
-                            np.arange(outspec.shape[0] + 1),
-                            bin_edges,
-                        )
-                    else:
-                        f[key] = (outspec, bin_edges)
-    elif output_path.suffix == ".hdf5":
-        import h5py
-
-        with h5py.File(output_path, "w") as f:
-            hists.update(_bin_edges_dict(bin_edges))
-            for key, outspec in hists.items():
-                f.create_dataset(
-                    key,
-                    data=outspec,
-                    compression="gzip",
-                    compression_opts=9,
-                )
-    else:
-        raise Exception(f"File format {output_path.suffix} not supported.")
-
-
-def get_filetype(path: Path) -> str | None:
-    """
-    Determines file format of path using magic bytes.
-    Supports root-files, hdf5 and non-empty zip-files (used by npz).
-
-    :param path: Path of file.
-    :return: Mimetype of file or ``None``, if not sure.
-    """
-    with open(path, "rb") as f:
-        header = f.read(4)
-        return {
-            b"PK\x03\x04": "application/zip",
-            b"root": "application/root",
-            b"\x89HDF": "application/x-hdf5",
-        }.get(header, None)
-
-
-def get_bin_edges(
-    hist: np.ndarray,
-) -> tuple[np.ndarray, list[np.ndarray]]:
-    """
-    Trys to determine if 2D hist contains column(s) with binning information.
-
-    :param hist: Histogram
-
-    :return:
-        - Extracted histogram
-        - Bin edges of histogram or None, if not available
-    :raises: ValueError
-    """
-    if hist.ndim != 2 or hist.shape[1] < 2:
-        raise ValueError(
-            "Array is wrong dimension (≠ 2), cannot extract bin edges."
-        )
-    if hist.shape[0] < hist.shape[1]:
-        hist = hist.T
-    if hist.shape[1] >= 3:
-        if (hist[:-1, 1] == hist[1:, 0]).all():
-            return hist[:, 2], [np.concatenate([hist[:, 0], [hist[-1, 1]]])]
-        else:
-            raise ValueError(
-                "Lower and upper bin edges (column 0 and 1) are not continuous."
-            )
-    diff = np.diff(hist[:, 0]) / 2
-    return (
-        hist[:, 1],
-        [
-            np.concatenate(
-                [
-                    [hist[0, 0] - diff[0]],
-                    hist[1:, 0] - diff,
-                    [hist[-1, 0] + diff[-1]],
-                ]
-            )
-        ],
-    )
-
-
-def get_obj_by_name(mapping: Mapping[str, Any], name: str | None = None) -> Any:
-    """
-    Returns object from mapping.
-
-    If a name is provided, the object is returned by name. If no name
-    is provided and the mapping contains only one object, this object
-    is returned.
-
-    :param mapping: Mapping such as dictionary or container file.
-    :param name: Optional name of object to return.
-    :return: Object, if a unique mapping is found.
-    """
-    if name:
-        return mapping[name]
-    keys = [key for key in mapping.keys() if not key.startswith("bin_edges")]
-
-    if len(keys) == 1:
-        return mapping[keys[0]]
-    raise KeyError("Please provide name of object")
-
-
-def get_obj_bin_edges(mapping: Mapping[str, Any]) -> list[np.ndarray]:
-    """
-    Returns bin edges from mapping.
-
-    :param mapping: Mapping such as dictionary or container file.
-    :return: List of bin edges arrays.
-    """
-    if "bin_edges" in mapping:
-        return [mapping["bin_edges"]]
-    bin_edges_keys = sorted(
-        key for key in mapping.keys() if key.startswith("bin_edges_")
-    )
-    if bin_edges_keys:
-        return [mapping[key] for key in bin_edges_keys]
-    raise KeyError("Object does not contain bin_edges.")
-
-
-def get_keys_in_container(path: Path) -> list[str]:
-    """
-    Returns all keys that are available in a container.
-
-    :param path: Path of container file.
-    :return: List of available keys.
-    """
-    filetype = get_filetype(path)
-    if filetype == "application/root":
-        import uproot
-
-        with uproot.open(path) as container:
-            return list(container.iterkeys(cycle=False))
-    elif filetype == "application/zip":
-        with np.load(path) as container:
-            return list(container.keys())
-    elif filetype == "application/x-hdf5":
-        import h5py
-
-        with h5py.File(path, "r") as container:
-            return list(container.keys())
-    return []
-
-
-def read_spectrum(
-    spectrum: Path,
-    histname: str | None = None,
-    extract_bin_edges: bool = True,
-) -> tuple[np.ndarray, list[np.ndarray]]:
-    """
-    Reads spectrum to numpy array.
-
-    :param spectrum: Path of spectrum file.
-    :param histname: Name of histogram in spectrum file to load (optional).
-    :param extract_bin_edges: Determine bin edges of spectrum.
-
-    :return:
-        - Extracted histogram.
-        - List of bin edges of spectrum, empty if not available.
-    """
-    filetype = get_filetype(spectrum)
-    if filetype == "application/root":
-        import uproot
-
-        with uproot.open(spectrum) as specfile:
-            hist, *res_bin_edges = get_obj_by_name(
-                specfile, histname
-            ).to_numpy()
-            return hist, res_bin_edges
-    elif filetype == "application/zip":
-        with np.load(spectrum) as specfile:
-            hist = get_obj_by_name(specfile, histname)
-            if extract_bin_edges:
-                try:
-                    return (hist, get_obj_bin_edges(specfile))
-                except KeyError:
-                    pass
-    elif filetype == "application/x-hdf5":
-        import h5py
-
-        with h5py.File(spectrum, "r") as specfile:
-            hist = get_obj_by_name(specfile, histname)[()]
-            if extract_bin_edges:
-                try:
-                    return (
-                        hist,
-                        [a[()] for a in get_obj_bin_edges(specfile)],
-                    )
-                except KeyError:
-                    pass
-    else:
-        hist = np.loadtxt(spectrum)
-    if extract_bin_edges:
-        return get_bin_edges(hist)
-    return hist, []
-
-
-def read_pos_int_spectrum(
-    path: Path,
-    histname: str | None = None,
-    extract_bin_edges: bool = True,
-    rtol: float = 1e-05,
-    atol: float = 1e-08,
-) -> tuple[np.ndarray, list[np.ndarray]]:
-    """
-    Reads spectrum to numpy array of type np.integer. The spectrum must
-    not contain negative bins.
-
-    :param spectrum: Path of spectrum file.
-    :param histname: Name of histogram in spectrum file to load (optional).
-    :param extract_bin_edges: Determine bin edges of spectrum.
-    :param rtol:
-        The relative tolerance parameter (optional, passed to numpy.isclose).
-    :param atol:
-        The absolute tolerance parameter (optional, passed to numpy.isclose).
-
-    :return:
-        - Extracted histogram
-        - Bin edges of spectrum or None, if not available
-    """
-    spectrum, spectrum_bin_edges = read_spectrum(
-        path, histname, extract_bin_edges
-    )
-    if not issubclass(spectrum.dtype.type, np.integer):
-        logger.warning("Histogram is not of type integer, converting ...")
-        spectrum_before = spectrum
-        spectrum = spectrum.astype(np.int64)
-        if not np.isclose(
-            spectrum_before, spectrum, rtol=rtol, atol=atol
-        ).all():
-            raise ValueError(
-                "Lost precision during conversion to integer histogram."
-            )
-    if (spectrum < 0).any():
-        raise ValueError(
-            "Assuming Poisson distribution, but histogram contains negative bins."
-        )
-    return spectrum, spectrum_bin_edges
+    offset = {"centers": -0.5, "edges": 0.0}[convention]
+    cal = np.poly1d(calibration[::-1])
+    orig = np.arange(num_bins + 1) + offset
+    return cal(orig)
 
 
 def read_rebin_spectrum(
     path: Path,
     bin_edges_rebin: np.ndarray,
     histname: str | None = None,
-    cal_bin_centers: list[float] | None = None,
-    cal_bin_edges: list[float] | None = None,
-    filter_spectrum: Callable[[np.ndarray], np.ndarray] | None = None,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+    calibration: npt.ArrayLike | None = None,
+    convention: Literal["edges", "centers"] = "edges",
+) -> hist.BaseHist:
     """
     Reads and rebin spectrum.
 
@@ -372,328 +71,171 @@ def read_rebin_spectrum(
     :param bin_edges_rebin: Rebin spectrum to this bin_edges array.
     :param histname:
         Provide object name for files containing multiple objects.
-    :param cal_bin_centers:
-        Bin centers to calibrate spectrum before rebinning.
-    :param cal_bin_edges:
-        Bin edges to calibrate spectrum before rebinning.
-    :param filter_spectrum:
-        Apply filter function to spetrum before rebinning.
+    :param calibration:
+        Polynomial coefficients to calibrate spectrum before rebinning.
+    :param convention:
+        `calibration` calibrates `"edges"` (default) or `"centers`.
     :return:
         - Histogram
         - Bin edges
     """
-    if cal_bin_centers or cal_bin_edges:
-        spectrum, included_bin_edges = read_pos_int_spectrum(
-            path, histname, extract_bin_edges=False
-        )
-        if included_bin_edges:
+    spectrum = read_spectrum(path, histname)
+    if spectrum.values().dtype != int:
+        raise ValueError("Spectrum contents are not of type integer.")
+    if (spectrum.values() < 0).any():
+        raise ValueError("Spectrum contents are not non-negative.")
+
+    if calibration:
+        if not isinstance(spectrum.axes[0], hist.axis.Integer):
             logger.warning("Ignoring binning information of spectrum")
-        if cal_bin_centers:
-            spectrum_bin_edges = np.poly1d(np.array(cal_bin_centers)[::-1])(
-                np.arange(spectrum.size + 1) - 0.5
+        spectrum = hist.Hist.new.Variable(
+            get_bin_edges_from_calibration(
+                spectrum.shape[0], calibration, convention
             )
-        else:
-            spectrum_bin_edges = np.poly1d(np.array(cal_bin_edges)[::-1])(
-                np.arange(spectrum.size + 1)
-            )
-    else:
-        spectrum, (spectrum_bin_edges,) = read_pos_int_spectrum(path, histname)
+        ).Int64(data=spectrum.values())
 
-    if filter_spectrum is not None:
-        spectrum = filter_spectrum(spectrum)
-
-    if spectrum_bin_edges is not None:
-        spectrum = rebin_uniform(spectrum, spectrum_bin_edges, bin_edges_rebin)
-
-    return spectrum, [spectrum_bin_edges]
-
-
-def reduce_binning(
-    bin_edges: np.ndarray,
-    binning_factor: int,
-    left: float = 0.0,
-    right: float = np.inf,
-) -> tuple[int, int]:
-    """
-    Crops bin_edges to left and right and reduces the binning by
-    binning_factor. Both left and right are included in the resulting axis.
-
-    :param bin_edges: bin_edges array to work on.
-    :param binning_factor:
-        Number of neighboring bins of response matrix that are merged,
-        starting at ``left``.
-    :param left:
-        Crop ``bin_edges`` of response matrix to the lowest bin
-        still containing ``left``.
-    :param right:
-        Crop ``bin_edges`` of response matrix to the highest bin
-        still containing ``right``.
-
-    :return:
-        - Index of original bin_edges for lowest bin edge of resulting axis.
-        - Index of original bin_edges for highest bin edge of resulting axis.
-    """
-    left_bin = np.argmax(left < bin_edges[1:])
-    right_bin = left_bin + (
-        np.argmax(right <= bin_edges[left_bin::binning_factor]) * binning_factor
-        or bin_edges.shape[0] - left_bin - 1
+    spec_rebin = rebin_uniform(
+        spectrum.values(), spectrum.axes[0].edges, bin_edges_rebin
     )
-    return left_bin, right_bin
 
-
-def rebin_hist(
-    hist: np.ndarray,
-    binning_factor: int,
-    bin_edges: np.ndarray | None = None,
-    left: float = -np.inf,
-    right: float = np.inf,
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Rebins hist with dimension $N^M$.
-
-    The binning is reduced by a factor of bin_width, i.e. neighboring
-    bins are summed.
-
-    :param hist: Input matrix of type $N^M$ (N bins, M dimensions).
-    :param binning_factor:
-        Number of neighboring bins of response matrix that are merged,
-        starting at ``left``.
-    :param bin_edges:
-        Optional bin_edges array of hist, defaults to ``[0., 1., ...]``.
-    :param left:
-        Crop ``bin_edges`` of response matrix to the lowest bin
-        still containing ``left``.
-    :param right:
-        Crop ``bin_edges`` of response matrix to the highest bin
-        still containing ``right``.
-
-    :return:
-        - Rebinned matrix
-        - Resulting bin edges
-    """
-    if bin_edges is None:
-        bin_edges = np.arange(0.0, hist.shape[0] + 1)
-    left_bin, right_bin = reduce_binning(bin_edges, binning_factor, left, right)
-    num_dim = hist.ndim
-    num_bins = (right_bin - left_bin) // binning_factor
-
-    if not (np.array(hist.shape)[1:] == np.array(hist.shape)[:-1]).all():
-        raise ValueError("Input histogram has to be square.")
-
-    res = (
-        hist[(slice(left_bin, right_bin),) * num_dim]
-        .reshape(*[num_bins, binning_factor] * num_dim)
-        .sum(axis=(num_dim * 2 - 1))
-    )
-    for i in range(1, num_dim):
-        res = res.sum(axis=i)
-    return (
-        res / binning_factor,
-        bin_edges[left_bin : right_bin + 1 : binning_factor],
-    )
+    return hist.Hist.new.Variable(bin_edges_rebin).Int64(data=spec_rebin)
 
 
 def rebin_uniform(
-    hist: np.ndarray, bin_edges: np.ndarray, bin_edges_new: np.ndarray
+    hist_old: np.ndarray,
+    bin_edges_old: np.ndarray,
+    bin_edges_new: np.ndarray,
+    *,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
-    Rebins hist from binning bin_edges to bin_edges_new.
+    Rebin histogram `hist_old` with binning `bin_edges_old` to `bin_edges_new`,
+    keeping Poisson-statistics intact by resampling with uniform distribution.
 
-    Each count in the original histogram is randomly placed within
-    the limits of the corresponding bin following a uniform probability
-    distribution. A new histogram with bin edges bin_edges_new is
-    filled with the resulting data.
+    Args:
+        hist_old: 1D histogram to be rebinned
+        bin_edges_old: Bin edges of existing histogram
+        bin_edges_new: Bin edges of new histogram
+        rng: Random number generator
 
-    :param hist: Original histogram to rebin.
-    :param bin_edges: bin edges of original histogram.
-    :param bin_edges_new: bin edges of rebinned histogram.
-
-    :return: Rebinned histogram.
+    Return:
+        Histogram rebinned to bin_edges_new
     """
-    if not issubclass(hist.dtype.type, np.integer):
-        raise ValueError("Histogram has to be of type integer")
-    if not (hist >= 0).all():
-        raise ValueError("Histogram contains negative bins")
+    if not rng:
+        rng = np.random.default_rng()
 
-    data_new = np.random.uniform(
-        np.repeat(bin_edges[:-1], hist), np.repeat(bin_edges[1:], hist)
+    if hist_old.dtype != int:
+        raise ValueError("Spectrum contents are not of type integer.")
+
+    # Expand old histogram (think of this as flow bins)
+    bin_edges_old = np.concatenate(
+        [[np.finfo(np.double).min], bin_edges_old, [np.finfo(np.double).max]]
     )
-    return np.histogram(data_new, bin_edges_new)[0]
+    hist_old = np.concatenate([[0], hist_old, [0]])
+
+    # Create unified bin_edges_all array, idx_rev notes new index for each element of `bin_edges_old`/`bin_edges_new`.
+    bin_edges_all, idx_rev = np.unique(
+        np.concatenate([bin_edges_new, bin_edges_old]), return_inverse=True
+    )
+
+    # Indices to split bin_edges_all at bin_edges_old/bin_edges_new
+    split_all_on_new, _, split_all_on_old, _ = np.split(
+        idx_rev, [bin_edges_new.shape[0], bin_edges_new.shape[0] + 1, -1]
+    )
+
+    # Create unnormalized pval arrays for all bins, split for each bin in old histogram
+    ratios = np.split(np.diff(bin_edges_all), split_all_on_old)
+
+    # Draw number of counts for each bin in bin_edges_all
+    i = 0
+    hist_all = np.zeros(bin_edges_all.shape[0] - 1)
+    for h, r in zip(hist_old, ratios):
+        if len(r) == 1:
+            hist_all[i] = h
+        else:
+            hist_all[i : i + len(r)] = rng.multinomial(h, r / np.sum(r))
+        i += len(r)
+
+    # Sum over neighboring bins to reduce binning to bin_edges_new
+    return np.add.reduceat(hist_all, split_all_on_new)[:-1]
 
 
-def load_rema(
-    path: Path,
-    hist_rema: str,
-    hist_norm: str | None = None,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+def rebin_uniform_continuous(
+    hist_old: np.ndarray, bin_edges_old: np.ndarray, bin_edges_new: np.ndarray
+) -> np.ndarray:
     """
-    Loads detector response matrix from file.
+    Rebin histogram `hist_old` with binning `bin_edges_old` to `bin_edges_new`,
+    without resampling, bin contents are divided smoothly.
 
-    :param path: Path of container file containing response matrix.
-    :param hist_rema : Name of histogram for response matrix.
-    :param hist_norm:
-        Name of histogram used for normalization (e.g. containing
-        number of simulated particles).
+    Args:
+        hist_old: 1D histogram to be rebinned
+        bin_edges_old: Bin edges of existing histogram
+        bin_edges_new: Bin edges of new histogram
 
-    :return:
-        - Response matrix
-        - List of bin_edges arrays
+    Return:
+        Histogram rebinned to bin_edges_new
     """
-    rema, bin_edges = read_spectrum(path, hist_rema)
-    if (
-        not (2 >= len(bin_edges) > 0)
-        or len(rema.shape) != 2
-        or rema.shape[0] != rema.shape[1]
-    ):
-        raise ValueError("Wrong response matrix dimension")
-    if hist_norm:
-        norm, (norm_bin_edges, *_) = read_spectrum(path, hist_norm)
-        if not (
-            bin_edges[0].shape == norm_bin_edges.shape
-            and np.isclose(bin_edges[0], norm_bin_edges).all()
-        ):
-            raise ValueError(
-                "Binning of response matrix and normalization histogram not equal"
-            )
-        rema /= norm
-    return rema, bin_edges
+    # Expand old histogram (think of this as flow bins)
+    bin_edges_old = np.concatenate(
+        [[np.finfo(np.double).min], bin_edges_old, [np.finfo(np.double).max]]
+    )
+    hist_old = np.concatenate([[0], hist_old, [0]])
+
+    # Create unified bin_edges_all array, idx_rev notes new index for each element of `bin_edges_old`/`bin_edges_new`.
+    bin_edges_all, idx_rev = np.unique(
+        np.concatenate([bin_edges_new, bin_edges_old]), return_inverse=True
+    )
+
+    # Indices to split bin_edges_all at bin_edges_old/bin_edges_new
+    split_all_on_new, _, split_all_on_old, _ = np.split(
+        idx_rev, [bin_edges_new.shape[0], bin_edges_new.shape[0] + 1, -1]
+    )
+
+    # Create unnormalized pval arrays for all bins, split for each bin in old histogram
+    ratios = np.split(np.diff(bin_edges_all), split_all_on_old)
+
+    # Draw number of counts for each bin in bin_edges_all
+    i = 0
+    hist_all = np.zeros(bin_edges_all.shape[0] - 1)
+    for h, r in zip(hist_old, ratios):
+        if len(r) == 1:
+            hist_all[i] = h
+        else:
+            hist_all[i : i + len(r)] = h * r / np.sum(r)
+        i += len(r)
+
+    # Sum over neighboring bins to reduce binning to bin_edges_new
+    return np.add.reduceat(hist_all, split_all_on_new)[:-1]
 
 
 def get_rema(
     path: Path,
-    hist_rema: str,
+    key_rema: str,
     binning_factor: int,
     left: int,
     right: int,
-    hist_norm: str | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> hist.BaseHist:
     """
-    Obtains the response matrix from container file, optionally applying
-    a normalization. Crops response matrix to ``left``and ``right`` and
-    does rebinning by ``binning_factor``.
+    Obtains the response matrix from container file.Crops response matrix
+    to ``left``and ``right`` and does rebinning by ``binning_factor``.
 
     :param path: Path of container file.
-    :param hist_rema: Name of detector respone matrix histogram.
+    :param key_rema: Name of detector respone matrix histogram.
     :param binning_factor:
         Number of neighboring bins of response matrix that are merged,
         starting at ``left``.
     :param left:
-        Crop ``bin_edges`` of response matrix to the lowest bin
-        still containing ``left``.
+        Crop response matrix to the lowest bin still containing ``left``.
     :param right:
-        Crop ``bin_edges`` of response matrix to the highest bin
-        still containing ``right``.
-    :param hist_norm:
-        Divide detector response matrix by this histogram, e. g.
-        to scale the matrix by the number of simulated particles
+        Crop response matrix to the highest bin not containing ``right``.
 
-    :return:
-        - Response matrix
-        - Bin edges
+    :return: Response matrix, which is cropped and rebinned.
     """
-    rema, bin_edges = load_rema(path, hist_rema, hist_norm)
-    bin_edges = bin_edges[0]
-
-    rema_re = rebin_hist(rema, binning_factor, bin_edges, left, right)
-    return rema_re
-
-
-@dataclass
-class SimInfo:
-    """Simulation info metadata"""
-
-    path: Path
-    energy: float
-    nevents: int
-
-    @classmethod
-    def from_dat_file_line(cls, line: str, sim_root: Path) -> SimInfo:
-        """
-        Creates SimInfo object from dat_file line
-
-        :param line:
-            Single line of dat file in format
-            ``<histogram>: <energy> <number of events``.
-        :param sim_root:
-            Root of simulation directory. Paths are given
-            relative to this directory.
-        """
-        path, energy, nevents = line.rsplit(maxsplit=2)
-        return cls(
-            sim_root / path.rstrip(":").strip().strip('"'),
-            float(energy),
-            int(nevents),
-        )
-
-    def __str__(self):
-        """Convert to dat_file line."""
-        return f"{self.path}: {self.energy} {self.nevents}"
-
-
-def read_dat_file(
-    dat_file_path: Path, sim_root: Path | None = None
-) -> list[SimInfo]:
-    """Reads and parses datfile.
-
-    :param dat_file_path: Path to datfile.
-    :param sim_root:
-        Optional, root of simulation directory. Paths in
-        dat_file_path are given relative to this directory.
-        If ``None``, it is assumed that they are given relative
-        to ``dat_file_path``.
-
-    :return: List of SimInfo objects
-    """
-    simulations = []
-    sim_root = sim_root or dat_file_path.parents[0]
-    with open(dat_file_path) as f:
-        for line in f:
-            simulations.append(SimInfo.from_dat_file_line(line, sim_root))
-    return simulations
-
-
-class SimSpec(SimInfo):
-    """Simulation spectrum with metadata."""
-
-    def __init__(
-        self,
-        path: Path,
-        detector: str | None,
-        energy: float,
-        nevents: int,
-        scale: float = 1.0,
-        normalize: bool = True,
-    ):
-        super().__init__(path, energy, nevents)
-        self.detector = detector
-        self.orig_spec, (self.bin_edges,) = read_spectrum(self.path, detector)
-        self.bin_edges *= scale
-        self.bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
-        if normalize:
-            self.spec = self.orig_spec / nevents
-        else:
-            self.spec = self.orig_spec
-
-    def binning_convention(self) -> float:
-        """
-        Determines relative shift of particle energy in comparison to bin width.
-        :return:
-            Binning convention. For tv-convention, this is 0.5,
-            for root-convention, it is 0.0.
-        """
-        ebin = self.find_bin(self.energy)
-        return (self.energy - self.bin_edges[ebin]) / (
-            self.bin_edges[ebin + 1] - self.bin_edges[ebin]
-        )
-
-    def find_bin(self, energy: float) -> int:
-        """
-        Finds bin number for bin containing ``energy``.
-
-        :param energy: Find bin containing this energy
-        :return: Bin number
-        """
-        return np.digitize(energy, self.bin_edges) - 1
+    rema = load_rema(path, key_rema)
+    return rema[
+        hist.loc(left) : hist.loc(right) + 1 : hist.rebin(binning_factor),
+        hist.loc(left) : hist.loc(right) + 1 : hist.rebin(binning_factor),
+    ]
 
 
 def interpolate_grid(
@@ -722,73 +264,77 @@ def interpolate_grid(
     return [(digit - 1, points[0], 1 - weight), (digit, points[1], weight)]
 
 
+def shift(arr: np.ndarray, shift: int) -> np.ndarray:
+    """
+    Shift `arr` by `shift` number of indices, fill rest with zeros
+
+    :param arr: Array to be shifted
+    :param shift: Number of indices to shift to the left/right
+    :return: Shifted array
+    """
+    result = np.zeros_like(arr)
+    if shift > 0:
+        result[shift:] = arr[:-shift]
+    elif shift < 0:
+        result[:shift] = arr[-shift:]
+    else:
+        result[:] = arr
+    return result
+
+
 def create_matrix(
-    simulations: list[SimInfo],
-    detector: str | None,
-    max_energy: float | None = None,
-    scale_hist_axis: float = 1e3,
-    normalize: bool = True,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    specs: Mapping[float, hist.BaseHist], bins: int, start: float, stop: float
+) -> hist.BaseHist:
     """
-    Create detector response matrix
+    Create detector response matrix from simulated spectra for
+    monoenergetic radiation
 
-    :param simulations:
-        List of simulations used to create the detector response matrix.
-    :param detector:
-        Name of detector.
-    :param max_energy:
-        Limit maximum energy of detector response matrix. If ``None``,
-        use the maximum simulated energy.
-    :param scale_hist_axis:
-        Scale energy axis of simulations with this parameter, for example,
-        to convert MeV to keV.
-    :param normalize:
-        Divide matrix by number of simulated particles.
-    :return: Detector response matrix and bin edges for both axes.
+    For missing energies, a linear interpolation of neighboring
+    simulations is created, shifting their energy to match the
+    position of the full-energy peak. Non-triangular detector
+    response matrices are not supported.
+
+    :param specs:
+        Dictionary of simulated energy and resulting spectrum.
+    :param bins:
+        Number of bins for response matrix axes.
+    :param start:
+        Lower edge of first bin of response matrix axes.
+    :param stop:
+        Upper edge of last bin of response matrix axes.
+    :return: Detector response matrix.
     """
-    specs = {
-        sim.energy: SimSpec(
-            sim.path,
-            detector,
-            sim.energy,
-            sim.nevents,
-            scale_hist_axis,
-            normalize,
-        )
-        for sim in simulations
-    }
-
+    axis = hist.axis.Regular(bins, start, stop, flow=False)
+    res = hist.Hist(axis, axis, storage=hist.storage.Double())
     energies = np.array(sorted(list(specs.keys())))
-    bin_edges = specs[energies[-1]].bin_edges
-    max_energy = max_energy or energies[-1]
-    max_idx = np.argmin(bin_edges < max_energy)
-    bin_edges = bin_edges[: max_idx + 1]
-    bin_width = bin_edges[-1] - bin_edges[-2]
-    rel_peak_pos = next(iter(specs.values())).binning_convention()
 
-    # TODO: Maybe some indices are wrong here?
-    mat = np.zeros(
-        shape=(bin_edges.shape[0] - 1, bin_edges.shape[0] - 1), dtype=np.float64
-    )
-    for i, energy in enumerate(bin_edges[:-1]):
-        sim_energy = energy + rel_peak_pos * bin_width
-        for _, jenergy, weight in interpolate_grid(energies, sim_energy):
-            shift = int(np.round(sim_energy - jenergy))
-            if shift < 0:
-                mat[i, 0 : i + 1] += (
-                    weight
-                    * specs[jenergy].spec[abs(shift) : abs(shift) + i + 1]
-                )
-                # mat[0:i, i] += weight * specs[jenergy].spec[abs(shift):abs(shift) + i].T
-            elif shift > 0:
-                mat[i, shift : i + 1] += (
-                    weight * specs[jenergy].spec[0 : i - shift + 1]
-                )
-                # mat[shift:i, i] += weight * specs[jenergy].spec[0: i - shift].T
-            else:
-                mat[i, 0 : i + 1] += weight * specs[jenergy].spec[0 : i + 1]
-                # mat[0:i, i] += weight * specs[jenergy].spec[0:i].T
-    return mat, bin_edges, bin_edges
+    OffsetSpec = namedtuple("OffsetSpec", ["offset", "bin_fep", "spec"])
+    specs_rebin = {}
+    for energy, spec in specs.items():
+        # Rebin the binning to the target axis. This might require adding an offset
+        sim_bin_fep = (np.argmin(spec.axes[0].edges <= energy) - 1) % (bins + 1)
+        mat_bin_fep = (np.argmin(axis.edges <= energy) - 1) % (bins + 1)
+        offset = axis.value(mat_bin_fep) - spec.axes[0].value(sim_bin_fep)
+        specs_rebin[energy] = OffsetSpec(
+            offset=offset,
+            bin_fep=mat_bin_fep,
+            spec=rebin_uniform_continuous(
+                specs[energy].values(),
+                specs[energy].axes[0].edges + offset,
+                axis.edges,
+            ),
+        )
+
+    for i, energy in enumerate(axis.centers):
+        for _, sim_energy, weight in interpolate_grid(energies, energy):
+            offset = specs_rebin[sim_energy].offset
+            bin_fep = specs_rebin[sim_energy].bin_fep
+            spec = specs_rebin[sim_energy].spec
+            res.values()[i, :] += weight * shift(spec, i - bin_fep)
+            # specs[sim_energy].spec.axes[0].edges,
+            # axis.edges - (energy - sim_energy)) # TODO: Not sure about the signs
+    res.values()[:, :] = np.tril(res.values())
+    return res
 
 
 def get_quantities(
@@ -803,7 +349,7 @@ def get_quantities(
     get_max: bool = False,
     get_hdi: bool = False,
     hdi_prob: float = one_sigma,
-) -> tuple[dict[str, np.ndarray], np.ndarray]:
+) -> dict[str, tuple[hist.BaseHist, float]]:
     """
     Creates and/or plots spectra from boris trace file.
 
@@ -824,11 +370,10 @@ def get_quantities(
         Probability for which the highest density interval will be computed.
         Defaults to 1σ.
     """
-    spec, bin_edges = read_spectrum(trace_file, var_name)
-    bin_edges = bin_edges[-1]
+    spec = read_spectrum(trace_file, var_name)
 
     if spec.ndim == 1:
-        return {var_name: spec}, bin_edges
+        return {var_name: spec}
 
     res = {}
 
@@ -859,54 +404,4 @@ def get_quantities(
             spec[None, :, :], hdi_prob=hdi_prob
         ).T
 
-    return res, bin_edges
-
-
-def export_trace(
-    trace: InferenceData,
-    output_path: Path,
-    thin: int = 1,
-    burn: int = 1000,
-    **kwargs: Any,
-) -> None:
-    """
-    Export MCMC chain trace to file. Also writes (and prints) 1D
-    parameters.
-
-    :param trace: MCMC chain trace to export
-    :param output_path: Write MCMC chain trace to this file.
-    :param thin: Thinning factor to decrease autocorrelation time
-    :param burn: Discard initial steps (burn-in time)
-    :param **kwargs:
-        Keyword arguments are passed to ``write_hists`` function.
-    """
-    bin_edges = trace.constant_data.bin_edges.values
-
-    out_hists = {
-        k: stat.T[burn::thin].values
-        for k, stat in trace.posterior.items()
-        if stat.shape[0] > 1
-    }
-    out_hists.update(
-        {k: stat.values for k, stat in trace.observed_data.items()}
-    )
-    out_params = {
-        k: stat.T[burn::thin].values
-        for k, stat in trace.posterior.items()
-        if stat.shape[0] == 1
-    }
-
-    for param, var in out_params.items():
-        logger.info(f"{param} parameter: {np.mean(var)} ± {np.std(var)}")
-
-    write_hists(
-        out_hists,
-        bin_edges,
-        output_path,
-        **kwargs,
-    )
-
-    if out_params:
-        np.savez_compressed(
-            output_path.parent / f"{output_path.stem}_params.npz", **out_params
-        )
+    return res

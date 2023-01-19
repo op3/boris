@@ -21,11 +21,14 @@
 
 import logging
 import warnings
-from typing import Optional
 
 import numpy as np
-import pymc3 as pm
-import theano.tensor as tt
+import pymc as pm
+
+try:
+    import pytensor as pt
+except ModuleNotFoundError:
+    import aesara as pt
 from arviz import InferenceData, waic
 
 logger = logging.getLogger(__name__)
@@ -36,10 +39,10 @@ def theuerkauf_norm(sigma, tl):
     Normalization factor for Theuerkauf peak shape
     """
     return 1 / (
-        (sigma**2) / tl * tt.exp(-(tl * tl) / (2.0 * sigma**2))
-        + tt.sqrt(np.pi / 2.0)
+        (sigma**2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma**2))
+        + pt.sqrt(np.pi / 2.0)
         * sigma
-        * (1 + tt.erf(tl / (tt.sqrt(2.0) * sigma)))
+        * (1 + pt.erf(tl / (pt.sqrt(2.0) * sigma)))
     )
 
 
@@ -53,21 +56,21 @@ def theuerkauf(x, pos, vol, sigma, tl):
     tl = 1.0 / (tl * sigma)
     dx = x - pos
     norm = theuerkauf_norm(sigma, tl)
-    _x = tt.switch(
+    _x = pt.switch(
         dx < -tl,
         tl / (sigma**2) * (dx + tl / 2.0),
         -dx * dx / (2.0 * sigma**2),
     )
-    return vol * norm * tt.exp(_x)
+    return vol * norm * pt.exp(_x)
 
 
 def deconvolute(
     rema: np.ndarray,
     spectrum: np.ndarray,
     bin_edges: np.ndarray,
-    background: Optional[np.ndarray] = None,
+    background: np.ndarray | None = None,
     background_scale: float = 1.0,
-    rema_alt: Optional[np.ndarray] = None,
+    rema_alt: np.ndarray | None = None,
     fit_beam: bool = False,
     ndraws: int = 10000,
     **kwargs,
@@ -159,7 +162,7 @@ def deconvolute(
             )
             # beam_folded = pm.Deterministic("beam_folded", beam_incident @ rema_eff)
             beam_folded = pm.Deterministic(
-                "beam_folded", tt.dot(beam_incident, rema_eff)
+                "beam_folded", pt.dot(beam_incident, rema_eff)
             )
             beam_folded_plus_bg = (
                 pm.Deterministic(
@@ -191,7 +194,12 @@ def deconvolute(
         if background is not None:
             start["background_incident"] = background_start
         trace = pm.sample(
-            ndraws, step=step, start=start, return_inferencedata=True, **kwargs
+            ndraws,
+            step=step,
+            start=start,
+            return_inferencedata=True,
+            idata_kwargs=dict(log_likelihood=True),
+            **kwargs,
         )
 
     with warnings.catch_warnings():

@@ -22,22 +22,23 @@
 import contextlib
 import logging
 from pathlib import Path
-from typing import Any, Callable, Generator, List, Mapping, Optional
+from typing import Any, Callable, Generator, List, Mapping, Optional, Literal
 
-
+import hist
 from tqdm import tqdm
 
 from boris.utils import (
     create_matrix,
-    export_trace,
-    get_keys_in_container,
     get_rema,
     get_quantities,
     one_sigma,
-    read_dat_file,
     read_rebin_spectrum,
-    write_hist,
-    write_hists,
+)
+from boris.io import (
+    get_simulation_spectra,
+    get_keys_in_container,
+    read_dat_file,
+    write_specs,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,14 +100,11 @@ def boris(
     background_spectrum: Optional[Path] = None,
     background_name: Optional[str] = None,
     background_scale: float = 1.0,
-    cal_bin_centers: Optional[List[float]] = None,
-    cal_bin_edges: Optional[List[float]] = None,
-    norm_hist: Optional[str] = None,
+    calibration: List[float] | None = None,
+    convention: Literal["edges", "centers"] = "edges",
     matrix_alt: Optional[Path] = None,
     force_overwrite: bool = False,
     deconvolute: Optional[Callable[..., Mapping]] = None,
-    thin: int = 1,
-    burn: int = 1000,
     fit_beam=False,
     **kwargs: Any,
 ) -> None:
@@ -140,25 +138,16 @@ def boris(
     :param background_scale:
         Relative scale of background spectrum to observed spectrum
         (e. g. ratio of live times).
-    :param cal_bin_centers:
-        Optional energy calibration polynomial that is used to
-        calibrate the energy of the bin_centers of the observed
-        spectrum and background spectrum. (hdtv-style calibration)
-    :param cal_bin_edges:
-        Optional energy calibration polynomial that is used to
-        calibrate the energy of the bin_edges of the observed
-        spectrum and background spectrum. (root-style calibration)
-    :param norm_hist:
-        Divide detector response matrix by this histogram
-        (e. g., to correct for number of simulated particles).
+    :param calibration:
+        Polynomial coefficients to calibrate spectrum before rebinning.
+    :param convention:
+        `calibration` calibrates `"edges"` (default) or `"centers"`.
     :param matrix_alt:
         Path of container file containing alternative matrix
         that is used to create a linear combination of two
         matrices (interpolate between both matrices).
     :param force_overwrite: Overwrite ``incident_spectrum`` if it exists.
     :param deconvolute: Alternate function used for deconvolution.
-    :param thin: Thinning factor to decrease autocorrelation time
-    :param burn: Discard initial steps (burn-in time)
     :param fit_beam: Perform fit of beam profile
     :param \**kwargs:
         Keyword arguments are passed to ``deconvolute`` function.
@@ -166,35 +155,34 @@ def boris(
     if not force_overwrite:
         check_if_exists(incident_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
-        rema, rema_bin_edges = get_rema(
-            matrix, rema_name, binning_factor, left, right, norm_hist
-        )
-        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        rema = get_rema(matrix, rema_name, binning_factor, left, right)
+        edges = rema.axes[0].edges
+        logger.debug(f"Bin edges: [{edges[0]}, {edges[1]}, …, {edges[-1]}]")
         logger.debug(f"Response matrix shape: {rema.shape}")
-        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
+        logger.debug(f"Response matrix diagonal:\n{rema.values().diagonal()}")
 
     rema_alt = None
     if matrix_alt:
         with do_step(
             f"Reading alternative response matrix {rema_name} from {matrix_alt}"
         ):
-            rema_alt, rema_alt_bin_edges = get_rema(
-                matrix_alt, rema_name, binning_factor, left, right, norm_hist
+            rema_alt = get_rema(
+                matrix_alt, rema_name, binning_factor, left, right
             )
             logger.debug(
-                f"Alternative response matrix diagonal:\n{rema_alt.diagonal()}"
+                f"Alternative response matrix diagonal:\n{rema_alt.values().diagonal()}"
             )
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
         f"Reading observed spectrum {observed_spectrum}{print_histname}"
     ):
-        spectrum, _ = read_rebin_spectrum(
+        spectrum = read_rebin_spectrum(
             observed_spectrum,
-            rema_bin_edges,
+            edges,
             histname,
-            cal_bin_centers,
-            cal_bin_edges,
+            calibration,
+            convention,
         )
         logger.debug(f"Observed spectrum:\n{spectrum}")
 
@@ -204,37 +192,38 @@ def boris(
         with do_step(
             f"Reading background spectrum {background_spectrum or observed_spectrum}{print_bgname}"
         ):
-            background, _ = read_rebin_spectrum(
+            background = read_rebin_spectrum(
                 background_spectrum or observed_spectrum,
-                rema_bin_edges,
+                edges,
                 background_name,
-                cal_bin_centers,
-                cal_bin_edges,
+                calibration,
+                convention,
             )
+            print(background.values())
             logger.debug(f"Background spectrum:\n{background}")
 
     with do_step("🎲 Sampling from posterior distribution"):
         if deconvolute is None:
             from boris.core import deconvolute
         trace = deconvolute(
-            rema,
-            spectrum,
-            rema_bin_edges,
-            background,
+            rema.values(),
+            spectrum.values(),
+            rema.axes[0].edges,
+            background.values() if background else None,
             background_scale,
-            rema_alt,
+            rema_alt.values() if rema_alt else None,
             fit_beam,
             **kwargs,
         )
 
     with do_step(f"💾 Writing incident spectrum trace to {incident_spectrum}"):
-        export_trace(
-            trace,
-            incident_spectrum,
-            thin,
-            burn,
-            force_overwrite=force_overwrite,
-        )
+        import arviz
+
+        trace.sample_stats = trace.sample_stats.reset_index("sample")
+        trace.posterior = trace.posterior.reset_index("sample")
+        trace.log_likelihood = trace.log_likelihood.reset_index("sample")
+        trace.constant_data = trace.constant_data.reset_index("sample")
+        arviz.to_netcdf(trace, incident_spectrum)
 
 
 def sirob(
@@ -249,9 +238,8 @@ def sirob(
     background_spectrum: Optional[Path] = None,
     background_name: Optional[str] = None,
     background_scale: float = 1.0,
-    cal_bin_centers: Optional[List[float]] = None,
-    cal_bin_edges: Optional[List[float]] = None,
-    norm_hist: Optional[str] = None,
+    calibration: List[float] | None = None,
+    convention: Literal["edges", "centers"] = "edges",
     force_overwrite: bool = False,
 ) -> None:
     """
@@ -285,16 +273,10 @@ def sirob(
     :param background_scale:
         Relative scale of background spectrum to incident spectrum
         (e. g. ratio of live times).
-    :param cal_bin_centers:
-        Optional energy calibration polynomial that is used to
-        calibrate the energy of the bin_centers of the incident
-        spectrum and background spectrum. (hdtv-style calibration)
-    :param cal_bin_edges:
-        Optional energy calibration polynomial that is used to
-        calibrate the energy of the bin_edges of the incident
-        spectrum and background spectrum. (root-style calibration)
-    :param norm_hist: Divide detector response matrix by this histogram
-        (e. g., to correct for number of simulated particles).
+    :param calibration:
+        Polynomial coefficients to calibrate spectrum before rebinning.
+    :param convention:
+        `calibration` calibrates `"edges"` (default) or `"centers`.
     :param force_overwrite: Overwrite output_path if it exists.
     :param deconvolute: Function used for deconvolution.
     :param kwargs: Passed to ``deconvolute`` function.
@@ -302,23 +284,22 @@ def sirob(
     if not force_overwrite:
         check_if_exists(observed_spectrum)
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
-        rema, rema_bin_edges = get_rema(
-            matrix, rema_name, binning_factor, left, right, norm_hist
-        )
-        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        rema = get_rema(matrix, rema_name, binning_factor, left, right)
+        edges = rema.axes[0].edges
+        logger.debug(f"Bin edges: [{edges[0]}, {edges[1]}, …, {edges[-1]}]")
         logger.debug(f"Response matrix shape: {rema.shape}")
-        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
+        # logger.debug(f"Response matrix diagonal:\n{rema.values().diagonal()}")
 
     print_histname = f" ({histname})" if histname else ""
     with do_step(
         f"Reading incident spectrum {incident_spectrum}{print_histname}"
     ):
-        incident, (spectrum_bin_edges,) = read_rebin_spectrum(
+        incident = read_rebin_spectrum(
             incident_spectrum,
-            rema_bin_edges,
+            rema.axes[0].edges,
             histname,
-            cal_bin_centers,
-            cal_bin_edges,
+            calibration,
+            convention,
         )
         logger.debug(f"Incident spectrum:\n{incident}")
 
@@ -328,26 +309,25 @@ def sirob(
         with do_step(
             f"Reading background spectrum {background_spectrum or observed_spectrum}{print_bgname}"
         ):
-            background, _ = read_rebin_spectrum(
+            background = read_rebin_spectrum(
                 background_spectrum or incident_spectrum,
-                rema_bin_edges,
+                rema.axes[0].edges,
                 background_name,
-                cal_bin_centers,
-                cal_bin_edges,
+                calibration,
+                convention,
             )
             logger.debug(f"Background spectrum:\n{background}")
 
     with do_step("Calculating observed (convoluted) spectrum"):
-        observed = incident @ rema
+        observed = hist.Hist(rema.axes[0], storage=hist.storage.Double())
+        observed.values()[:] = incident.values() @ rema.values()
         if background is not None:
-            observed += background_scale * background
+            observed.values()[:] += background_scale * background.values()
 
     with do_step(f"Writing observed spectrum to {observed_spectrum}"):
-        write_hist(
+        write_specs(
             observed_spectrum,
-            "observed",
-            observed,
-            spectrum_bin_edges,
+            {"observed": observed},
             force_overwrite,
         )
 
@@ -412,6 +392,7 @@ def boris2spec(
     bin_edges = None
 
     for var_name in var_names:
+        # TODO: Use hist for this
         quantities, bin_edges = get_quantities(
             trace_file,
             var_name,
@@ -428,12 +409,11 @@ def boris2spec(
         res.update(quantities)
 
     if output_path and res and bin_edges is not None:
-        write_hists(res, bin_edges, output_path, force_overwrite)
+        write_specs(output_path, res, force_overwrite)
 
-    if plot is not None:
+    if plot is not None and bin_edges is not None:
         import matplotlib.pyplot as plt
 
-        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
         label = {
             "mean": "Mean",
             "median": "Median",
@@ -447,29 +427,29 @@ def boris2spec(
         prop_cycle = plt.rcParams["axes.prop_cycle"]
         for var_name, props in zip(var_names, prop_cycle()):
             if var_name in res:
-                plt.step(
-                    bin_centers,
+                plt.stairs(
                     res[var_name],
+                    bin_edges,
                     where="mid",
                     label=var_name,
                     **props,
                 )
             else:
                 if get_hdi:
-                    plt.fill_between(
-                        bin_centers,
-                        res[f"{var_name}_hdi_lo"],
+                    plt.stairs(
                         res[f"{var_name}_hdi_hi"],
-                        step="mid",
+                        bin_edges,
+                        baseline=res[f"{var_name}_hdi_lo"],
+                        fill=True,
                         alpha=0.3,
                         **props,
                     )
 
                 for key in label.keys():
                     if f"{var_name}_{key}" in res:
-                        plt.step(
-                            bin_centers,
+                        plt.stairs(
                             res[f"{var_name}_{key}"],
+                            bin_edges,
                             where="mid",
                             label=f"{label[key]} ({var_name})",
                             **props,
@@ -496,7 +476,6 @@ def make_matrix(
     output_path: Path,
     dets: Optional[List[str]] = None,
     max_energy: Optional[float] = None,
-    scale_hist_axis: float = 1e3,
     sim_dir: Optional[Path] = None,
     force_overwrite: bool = False,
 ) -> None:
@@ -511,9 +490,6 @@ def make_matrix(
     :param max_energy:
         Limit maximum energy of detector response matrix. If ``None``,
         use the maximum simulated energy.
-    :param scale_hist_axis:
-        Scale energy axis of simulations with this parameter, for example,
-        to convert MeV to keV.
     :param sim_dir:
         Root of simulation directory. Paths in ``dat_file_path`` are
         given relative to this directory. If ``None``, it is assumed
@@ -530,18 +506,14 @@ def make_matrix(
     with tqdm(dets or [None], desc="Creating matrices", unit="matrix") as pbar:
         for det in pbar:
             pbar.set_description(f"Creating matrix for detector {det}")
+            sim_spectra = get_simulation_spectra(simulations, det)
+            max_energy = max_energy or max(sim_spectra.keys())
             remas[det] = create_matrix(
-                simulations, det, max_energy, scale_hist_axis
+                sim_spectra, int(max_energy), 0, max_energy
             )
 
     with do_step(f"Writing created matrices to {output_path}"):
-        idx = next(iter(remas))
-        write_hists(
-            {det: rema[0] for det, rema in remas.items()},
-            [remas[idx][1], remas[idx][2]],
-            output_path,
-            force_overwrite,
-        )
+        write_specs(output_path, remas, force_overwrite)
 
 
 def check_matrix(
@@ -550,7 +522,6 @@ def check_matrix(
     left: int,
     right: int,
     rema_name: str = "rema",
-    norm_hist: Optional[str] = None,
 ) -> None:
     """
     Visualizes detector response matrix.
@@ -560,37 +531,36 @@ def check_matrix(
         Number of neighboring bins of response matrix that are merged,
         starting at ``left``.
     :param left:
-        Crop ``bin_edges`` of response matrix to the lowest bin
-        still containing ``left``.
+        Crop response matrix to the lowest bin still containing ``left``.
     :param right:
-        Crop ``bin_edges`` of response matrix to the highest bin
-        still containing ``right``.
+        Crop response matrix to the highest bin not containing ``right``.
     :param rema_name:
         Name of the detector response matrix in matrix file
         (only required if not unique).
-    :param norm_hist:
-        Divide detector response matrix by this histogram
-        (e. g., to correct for number of simulated particles).
     """
+    import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
 
     with do_step(f"Reading response matrix {rema_name} from {matrix}"):
-        rema, rema_bin_edges = get_rema(
-            matrix, rema_name, binning_factor, left, right, norm_hist
-        )
-        logger.debug(f"Bin edges:\n{rema_bin_edges}")
+        rema = get_rema(matrix, rema_name, binning_factor, left, right)
         logger.debug(f"Response matrix shape: {rema.shape}")
-        logger.debug(f"Response matrix diagonal:\n{rema.diagonal()}")
+        # logger.debug(f"Response matrix diagonal:\n{rema.values().diagonal()}")
 
+    # Hide zero-values
+    rema.values()[rema.values() == 0.0] = np.nan
+    vmin = np.nanquantile(rema.values()[rema.values() > 1e-20], 0.01)
+    vmax = np.nanmax(rema.values())
     plt.pcolormesh(
-        rema_bin_edges,
-        rema_bin_edges,
+        rema.axes[0].edges,
+        rema.axes[1].edges,
         rema,
-        norm=LogNorm(vmin=rema[rema > 1e-20].min(), vmax=rema.max()),
+        cmap="viridis_r",
+        norm=LogNorm(vmin=vmin, vmax=vmax),
     )
     plt.title(rema_name)
     plt.xlabel("Observed energy")
     plt.ylabel("Particle energy")
+    plt.ylim(rema.axes[1].edges[-1], rema.axes[1].edges[0])
     plt.tight_layout()
     plt.show()

@@ -23,21 +23,23 @@ import sys
 import contextlib
 
 import numpy as np
+import hist
 
-from boris.utils import write_hists, SimInfo
+from boris.io import write_specs, SimInfo
 
 
 def create_simulations(tmp_path, detectors=None, shift_axis=0.0):
     detectors = detectors or ["det1"]
     simulations = []
+    bin_edges = np.linspace(0, 1000, 1001) + shift_axis
     for i in np.linspace(0, 600, 9, dtype=int):
-        hist = np.zeros(1000)
-        hist[:i] = 500 * np.random.uniform(size=i)
-        hist[i] = 50000
-        bin_edges = np.linspace(0, 1000, 1001) + shift_axis
         path = tmp_path / f"sim_{i}keV.root"
-        hists = {det: hist for det in detectors}
-        write_hists(hists, bin_edges, path)
+        spec = np.zeros(1000)
+        spec[:i] = 500 * np.random.uniform(size=i)
+        spec[i] = 50000
+        spec = hist.Hist.new.Variable(bin_edges).Double(data=spec)
+        hists = {det: spec for det in detectors}
+        write_specs(path, hists)
         simulations.append(SimInfo(path, i, 1000000))
     return simulations
 

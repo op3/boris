@@ -24,7 +24,7 @@ from unittest import mock
 
 import numpy as np
 
-from boris.utils import read_spectrum, write_hists
+from boris.io import read_spectrum, write_specs
 from boris.boris2spec_app import Boris2SpecApp, init
 
 

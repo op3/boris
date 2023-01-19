@@ -22,7 +22,7 @@ from unittest import mock
 
 import numpy as np
 
-from boris.utils import write_hist
+from boris.io import write_specs
 from boris.boris_app import BorisApp, init
 
 

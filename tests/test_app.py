@@ -26,6 +26,7 @@ from pathlib import Path
 
 import numpy as np
 import arviz
+import hist
 
 import boris.app
 from boris.boris_app import BorisApp
@@ -41,7 +42,7 @@ from boris.app import (
     setup_logging,
     sirob,
 )
-from boris.utils import write_hist, read_spectrum
+from boris.io import write_specs, read_spectrum
 
 from tests.helpers.utils import create_simulations
 
@@ -65,11 +66,16 @@ def test_help(app, name):
 
 
 def test_sirob(tmp_path):
-    rema = 0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2)
-    bin_edges = np.linspace(2000, 2200, 11)
-    incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
-    write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
-    write_hist(tmp_path / "incident.npz", "incident", incident, bin_edges)
+    rema = (
+        hist.Hist.new.Regular(10, 2000.0, 2200.0)
+        .Regular(10, 2000.0, 2200.0)
+        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
+    )
+    incident = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
+    )
+    write_specs(tmp_path / "rema.npz", {"rema": rema})
+    write_specs(tmp_path / "incident.npz", {"incident": incident})
     sirob(
         tmp_path / "rema.npz",
         tmp_path / "incident.npz",
@@ -79,14 +85,18 @@ def test_sirob(tmp_path):
         2200,
     )
     assert (tmp_path / "observed.npz").exists()
-    observed, (obs_bin_edges,) = read_spectrum(tmp_path / "observed.npz")
+    observed = read_spectrum(tmp_path / "observed.npz")
     assert observed.ndim == 1
     assert observed.shape[0] == 10
-    assert np.isclose(obs_bin_edges, bin_edges).all()
-    assert np.isclose(incident @ rema, observed).all()
+    assert np.isclose(observed.axes[0].edges, incident.axes[0].edges).all()
+    assert np.isclose(
+        incident.values() @ rema.values(), observed.values()
+    ).all()
 
-    background = np.random.uniform(10, 100, size=10).astype(np.int64)
-    write_hist(tmp_path / "background.npz", "background", background, bin_edges)
+    background = hist.Hist.new.Regular(10, 2000.0, 2200.0 + 1).Int64(
+        data=np.random.uniform(10, 100, size=10).astype(np.int64)
+    )
+    write_specs(tmp_path / "background.npz", {"background": background})
     sirob(
         tmp_path / "rema.npz",
         tmp_path / "incident.npz",
@@ -99,11 +109,14 @@ def test_sirob(tmp_path):
         background_scale=2.0,
     )
     assert (tmp_path / "observed_bg.npz").exists()
-    observed, (obs_bin_edges,) = read_spectrum(tmp_path / "observed_bg.npz")
+    observed = read_spectrum(tmp_path / "observed_bg.npz")
     assert observed.ndim == 1
     assert observed.shape[0] == 10
-    assert np.isclose(obs_bin_edges, bin_edges).all()
-    assert np.isclose(incident @ rema + 2.0 * background, observed).all()
+    assert np.isclose(observed.axes[0].edges, incident.axes[0].edges).all()
+    assert np.isclose(
+        incident.values() @ rema.values() + 2.0 * background.values(),
+        observed.values(),
+    ).all()
 
 
 def test_setup_logging():
@@ -128,12 +141,20 @@ def test_do_step():
 
 
 def test_boris(tmp_path):
-    rema = 0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2)
-    bin_edges = np.linspace(2000, 2200, 11)
-    incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
-    observed = (incident @ rema).astype(np.int64)
-    write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
-    write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
+    rema = (
+        hist.Hist.new.Regular(10, 2000.0, 2200.0)
+        .Regular(10, 2000.0, 2200.0)
+        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
+    )
+    incident = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
+    )
+    observed = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=(incident.values() @ rema.values()).astype(np.int64)
+    )
+
+    write_specs(tmp_path / "rema.npz", {"rema": rema})
+    write_specs(tmp_path / "observed.npz", {"observed": observed})
 
     boris.app.boris(
         tmp_path / "rema.npz",
@@ -144,18 +165,18 @@ def test_boris(tmp_path):
         2200,
         ndraws=10,
         tune=10,
-        thin=1,
-        burn=10,
         cores=1,
     )
     assert (tmp_path / "incident.npz").exists()
 
-    background = np.random.uniform(10, 100, size=10).astype(np.int64)
-    observed_bg = (incident @ rema + background).astype(np.int64)
-    write_hist(
-        tmp_path / "observed_bg.npz", "observed_bg", observed_bg, bin_edges
+    background = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=np.random.uniform(10, 100, size=10).astype(np.int64)
     )
-    write_hist(tmp_path / "background.npz", "background", background, bin_edges)
+    observed_bg = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=(incident.values() @ rema.values() + background.values())
+    )
+    write_specs(tmp_path / "observed_bg.npz", {"observed_bg": observed_bg})
+    write_specs(tmp_path / "background.npz", {"background": background})
 
     boris.app.boris(
         tmp_path / "rema.npz",
@@ -166,8 +187,6 @@ def test_boris(tmp_path):
         2200,
         ndraws=10,
         tune=10,
-        thin=1,
-        burn=10,
         cores=1,
         background_spectrum=tmp_path / "background.npz",
     )
@@ -201,15 +220,13 @@ def test_make_matrix(tmp_path, filename):
         tmp_path / filename,
         detectors,
         sim_dir=Path("/"),
-        scale_hist_axis=1.0,
     )
     assert (tmp_path / filename).exists()
     for det in detectors:
-        mat, (bin_edges, bin_edges2) = read_spectrum(tmp_path / filename, det)
-        assert (bin_edges == bin_edges2).all()
-        assert mat.shape[0] == mat.shape[1] == bin_edges.shape[0] - 1 == 600
-        assert np.isclose(bin_edges[0], 0.0)
-        assert np.isclose(bin_edges[-1], 600.0)
+        mat = read_spectrum(tmp_path / filename, det)
+        assert (mat.axes[0].edges == mat.axes[1].edges).all()
+        assert np.isclose(mat.axes[0].edges[0], 0.0)
+        assert np.isclose(mat.axes[0].edges[-1], 600.0)
 
 
 def test_check_if_exists(tmp_path):

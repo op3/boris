@@ -35,6 +35,8 @@ class SirobApp:
         from boris.app import setup_logging, sirob
 
         setup_logging(self.args.verbose)
+        calibration = self.args.cal_bin_edges or self.args.cal_bin_centers
+        convention = "centers" if self.args.cal_bin_centers else "edges"
         sirob(
             self.args.matrixfile,
             self.args.incident_spectrum,
@@ -47,9 +49,8 @@ class SirobApp:
             self.args.bg_spectrum,
             self.args.bg_hist,
             self.args.bg_scale,
-            self.args.cal_bin_centers,
-            self.args.cal_bin_edges,
-            self.args.norm_hist,
+            calibration,
+            convention,
             self.args.force_overwrite,
         )
 
@@ -67,14 +68,14 @@ class SirobApp:
         parser.add_argument(
             "-l",
             "--left",
-            help="lower edge of first bin of deconvoluted spectrum",
+            help="crop spectrum to the lowest bin still containing LEFT (default: %(default)s)",
             type=int,
             default=0,
         )
         parser.add_argument(
             "-r",
             "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum",
+            help="crop spectrum to the highest bin not containing RIGHT (default: maximum energy of simulation)",
             type=int,
             default=None,
         )
@@ -131,13 +132,6 @@ class SirobApp:
             help="Name of the detector response matrix in matrix file",
             default="rema",
             nargs="?",
-            type=str,
-        )
-        parser.add_argument(
-            "--norm-hist",
-            help="Divide detector response matrix by this histogram (e. g., to correct for number of simulated particles)",
-            nargs="?",
-            default=None,
             type=str,
         )
         parser.add_argument(

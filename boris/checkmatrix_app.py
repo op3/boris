@@ -41,7 +41,6 @@ class CheckMatrixApp:
             self.args.left,
             self.args.right,
             self.args.rema_name,
-            self.args.norm_hist,
         )
 
     def parse_args(self, args: list[str]):
@@ -63,14 +62,14 @@ class CheckMatrixApp:
         parser.add_argument(
             "-l",
             "--left",
-            help="lower edge of first bin of deconvoluted spectrum (default: %(default)s)",
+            help="crop response matrix to the lowest bin still containing LEFT (default: %(default)s)",
             type=float,
             default=0,
         )
         parser.add_argument(
             "-r",
             "--right",
-            help="maximum upper edge of last bin of deconvoluted spectrum (default: maximum energy of simulation)",
+            help="crop response matrix to the highest bin not containing RIGHT (default: maximum energy of simulation)",
             type=float,
             default=None,
         )
@@ -86,13 +85,6 @@ class CheckMatrixApp:
             help="name of the detector response matrix in matrix file  (default: %(default)s)",
             default="rema",
             nargs="?",
-            type=str,
-        )
-        parser.add_argument(
-            "--norm-hist",
-            help="divide detector response matrix by this histogram (e. g., to correct for number of simulated particles) (optional) (default: %(default)s)",
-            nargs="?",
-            default=None,
             type=str,
         )
         self.args = parser.parse_args(args)
