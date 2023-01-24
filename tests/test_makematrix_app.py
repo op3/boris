@@ -34,11 +34,10 @@ def test_MakeMatrixApp(tmp_path):
             print(str(sim), file=f, end="\n")
 
     sys.argv = [
-        "boris",
+        "makematrix",
         "--detector",
         "det1",
-        "--scale-hist-axis",
-        "1.",
+        "--",
         str(path),
         str(tmp_path / "test.root"),
     ]

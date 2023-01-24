@@ -200,7 +200,7 @@ class BorisApp:
         )
         parser.add_argument(
             "incident_spectrum",
-            help="write trace of incident spectrum to this path",
+            help="write trace of incident spectrum to this path (.nc file)",
             type=Path,
         )
 

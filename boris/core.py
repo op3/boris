@@ -26,9 +26,9 @@ import numpy as np
 import pymc as pm
 
 try:
-    import pytensor as pt
-except ModuleNotFoundError:
-    import aesara as pt
+    from pytensor import tensor as pt
+except ModuleNotFoundError:  # pragma: no cover
+    from aesara import tensor as pt
 from arviz import InferenceData, waic
 
 logger = logging.getLogger(__name__)
@@ -146,8 +146,8 @@ def deconvolute(
             beam_vol = pm.HalfFlat("beam_vol", shape=1)
 
             # L1 regularization
-            beam_tl = pm.Bound(pm.Laplace, lower=0.0)(
-                "beam_tl", 0.0, 1.0, shape=1
+            beam_tl = pm.Bound(
+                "beam_tl", pm.Laplace.dist(mu=0.0, b=1.0), lower=0.0, shape=1
             )
 
             beam_incident = pm.Deterministic(

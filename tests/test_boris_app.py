@@ -21,6 +21,7 @@ import sys
 from unittest import mock
 
 import numpy as np
+import hist
 
 from boris.io import write_specs
 from boris.boris_app import BorisApp, init
@@ -34,33 +35,48 @@ def test_BorisApp(tmp_path):
         "--right=2200",
         "--binning-factor=1",
         "--tune=50",
-        "--burn=50",
         "--fit-beam",
+        "--ndraws=50",
         "--bg-spectrum",
         str(tmp_path / "background.npz"),
         "--matrixfile-alt",
         str(tmp_path / "rema_alt.npz"),
         str(tmp_path / "rema.npz"),
         str(tmp_path / "observed.npz"),
-        str(tmp_path / "incident.npz"),
+        str(tmp_path / "incident.nc"),
     ]
-    rema = 0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2)
-    rema_alt = 0.1 * np.diag(np.ones(10)) + 0.02 * np.diag(np.ones(8), 2)
-    bin_edges = np.linspace(2000, 2200, 11)
-    incident = np.random.uniform(10, 1000, size=10).astype(np.int64)
-    background = np.random.uniform(10, 100, size=10).astype(np.int64)
-    observed_wobg = (incident @ rema).astype(np.int64)
-    observed = (incident @ rema + background).astype(np.int64)
-    write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
-    write_hist(tmp_path / "rema_alt.npz", "rema", rema_alt, bin_edges)
-    write_hist(tmp_path / "observed.npz", "observed", observed, bin_edges)
-    write_hist(
-        tmp_path / "observed_wobg.npz",
-        "observed_wobg",
-        observed_wobg,
-        bin_edges,
+
+    rema = (
+        hist.Hist.new.Regular(10, 2000, 2200)
+        .Regular(10, 2000, 2200)
+        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
     )
-    write_hist(tmp_path / "background.npz", "background", background, bin_edges)
+    rema_alt = (
+        hist.Hist.new.Regular(10, 2000, 2200)
+        .Regular(10, 2000, 2200)
+        .Double(data=0.1 * np.diag(np.ones(10)) + 0.02 * np.diag(np.ones(8), 2))
+    )
+    incident = hist.Hist.new.Regular(10, 2000, 2200).Int64(
+        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
+    )
+    background = hist.Hist.new.Regular(10, 2000, 2200).Int64(
+        data=np.random.uniform(10, 100, size=10).astype(np.int64)
+    )
+    observed_wobg = hist.Hist.new.Regular(10, 2000, 2200).Int64(
+        data=(incident.values() @ rema.values()).astype(np.int64)
+    )
+    observed = hist.Hist.new.Regular(10, 2000, 2200).Int64(
+        data=(background.values() + incident.values() @ rema.values()).astype(
+            np.int64
+        )
+    )
+
+    write_specs(tmp_path / "rema.npz", {"rema": rema})
+    write_specs(tmp_path / "rema_alt.npz", {"rema": rema_alt})
+    write_specs(tmp_path / "observed.npz", {"observed": observed})
+    write_specs(tmp_path / "observed_wobg.npz", {"observed": observed_wobg})
+    write_specs(tmp_path / "background.npz", {"background": background})
+
     BorisApp()
     (tmp_path / "incident.npz").exists()
 
@@ -71,7 +87,6 @@ def test_BorisApp(tmp_path):
         "--right=2200",
         "--binning-factor=1",
         "--tune=50",
-        "--burn=50",
         str(tmp_path / "rema.npz"),
         str(tmp_path / "observed_wobg.npz"),
         str(tmp_path / "incident_wobg.npz"),

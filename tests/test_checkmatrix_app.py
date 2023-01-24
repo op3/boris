@@ -23,6 +23,7 @@ import sys
 from unittest import mock
 
 import numpy as np
+import hist
 
 from boris.io import write_specs
 from boris.checkmatrix_app import CheckMatrixApp, init
@@ -30,15 +31,18 @@ from boris.checkmatrix_app import CheckMatrixApp, init
 
 @mock.patch("matplotlib.pyplot")
 def test_CheckMatrixApp_plot(mock_plt, tmp_path):
-    rema = np.diag(np.ones(10))
-    bin_edges = np.linspace(2000, 2200, 11)
-    write_hist(tmp_path / "rema.npz", "rema", rema, bin_edges)
+    rema = (
+        hist.Hist.new.Regular(10, 2000, 2200)
+        .Regular(10, 2000, 2200)
+        .Double(data=np.diag(np.ones(10)))
+    )
+    write_specs(tmp_path / "rema.npz", {"rema": rema})
 
     sys.argv = [
         "boris2spec",
-        "--left=0",
-        "--right=5",
-        "--binning-factor=1",
+        "--left=2000",
+        "--right=2200",
+        "--binning-factor=2",
         str(tmp_path / "rema.npz"),
     ]
     CheckMatrixApp()

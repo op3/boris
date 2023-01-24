@@ -43,6 +43,7 @@ from boris.app import (
     sirob,
 )
 from boris.io import write_specs, read_spectrum
+from boris.utils import read_rebin_spectrum
 
 from tests.helpers.utils import create_simulations
 
@@ -93,10 +94,11 @@ def test_sirob(tmp_path):
         incident.values() @ rema.values(), observed.values()
     ).all()
 
-    background = hist.Hist.new.Regular(10, 2000.0, 2200.0 + 1).Int64(
+    background = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
     )
     write_specs(tmp_path / "background.npz", {"background": background})
+
     sirob(
         tmp_path / "rema.npz",
         tmp_path / "incident.npz",
@@ -109,13 +111,13 @@ def test_sirob(tmp_path):
         background_scale=2.0,
     )
     assert (tmp_path / "observed_bg.npz").exists()
-    observed = read_spectrum(tmp_path / "observed_bg.npz")
-    assert observed.ndim == 1
-    assert observed.shape[0] == 10
-    assert np.isclose(observed.axes[0].edges, incident.axes[0].edges).all()
+    observed_bg = read_spectrum(tmp_path / "observed_bg.npz")
+    assert observed_bg.ndim == 1
+    assert observed_bg.shape[0] == 10
+    assert np.isclose(observed_bg.axes[0].edges, incident.axes[0].edges).all()
     assert np.isclose(
         incident.values() @ rema.values() + 2.0 * background.values(),
-        observed.values(),
+        observed_bg.values(),
     ).all()
 
 
