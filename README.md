@@ -1,7 +1,7 @@
 # boris
 
-[![Test Status](https://img.shields.io/github/workflow/status/op3/boris/Tests/master?label=tests)](https://github.com/op3/boris/actions/workflows/run-tests.yml)
-[![Code Style](https://img.shields.io/github/workflow/status/op3/boris/Code%20Formatting/master?label=style)](https://github.com/op3/boris/actions/workflows/check-code-formatting.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/op3/boris/run-tests.yml?branch=master&label=tests)](https://github.com/op3/boris/actions/workflows/run-tests.yml)
+[![Code Style](https://img.shields.io/github/actions/workflow/status/op3/boris/check-code-formatting.yml?branch=master&label=style)](https://github.com/op3/boris/actions/workflows/check-code-formatting.yml)
 [![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
 [![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
@@ -32,7 +32,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Requirements
 
-* Python>=3.8
+* Python>=3.10
 * [numpy](https://numpy.org/)
 * [PyMC](https://docs.pymc.io/)>=4.0
 * [arviz](https://docs.pymc.io/)>=0.14

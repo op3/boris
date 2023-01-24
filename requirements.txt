@@ -1,6 +1,7 @@
 arviz>=0.10.0
 h5py
+hist
 numpy
-pymc3>=3.9.0
+pymc>=4.0.0
 tqdm
 uproot>=4.1

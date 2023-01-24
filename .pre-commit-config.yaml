@@ -3,7 +3,7 @@ repos:
   rev: v2.32.0
   hooks:
   - id: pyupgrade
-    args: ["--py38-plus"]
+    args: ["--py310-plus"]
 
 - repo: https://github.com/psf/black
   rev: 22.3.0
@@ -28,7 +28,7 @@ repos:
   rev: v1.20.1
   hooks:
   - id: setup-cfg-fmt
-    args: ["--min-py3-version", "3.8"]
+    args: ["--min-py3-version", "3.10"]
 
 - repo: https://github.com/PyCQA/flake8
   rev: 4.0.1
