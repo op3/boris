@@ -73,16 +73,18 @@ def get_filetype(path: Path) -> str | None:
         }.get(header, None)
         if signature:
             return signature
-        if header[0:1] in b"+-.0123456789":
-            return "text/plain"
         header += f.readline()
-        line = header.split(b"\n")[0]
+        line = header.split(b"\n")[0].strip()
+        while line[0:1] == b"#":
+            line = f.readline().strip()
         if b"\t" in line:
             return "text/tab-separated-values"
         if b"," in line:
             return "text/comma-separated-values"
         if b" " in line:
             return "text/space-separated-values"
+        if line[0:1] in b"+-.0123456789":
+            return "text/plain"
         return None
 
 
@@ -284,7 +286,7 @@ def read_spectrum_txt(
     arr = np.loadtxt(container)
     if arr.ndim not in [1, 2]:
         raise ValueError("Array is wrong dimension, cannot extract bin edges.")
-    elif arr.ndim == 1 or arr.shape[1] == 1:
+    elif arr.ndim == 1 or arr.shape[0] == 1:
         obj = arr.ravel()
         h = hist.Hist.new.Integer(0, obj.shape[0])
     else:

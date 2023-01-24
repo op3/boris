@@ -195,6 +195,30 @@ def test_read_rebin_spectrum(tmp_path):
     # assert np.isclose(target_bin_edges, res_hist.axes[0].edges).all()
 
 
+def test_read_rebin_spectrum_negative(tmp_path):
+    h = hist.Hist.new.Regular(10, 0, 10).Int64(
+        data=np.random.uniform(-100, 100, size=10)
+    )
+    path = tmp_path / "test.npz"
+    write_specs(path, {"test": h})
+
+    target_bin_edges = np.linspace(-2.0, 12.0, 8)
+    with pytest.raises(ValueError):
+        read_rebin_spectrum(path, target_bin_edges, "test")
+
+
+def test_read_rebin_spectrum_non_int(tmp_path):
+    h = hist.Hist.new.Regular(10, 0, 10).Double(
+        data=np.random.uniform(0, 100, size=10)
+    )
+    path = tmp_path / "test.npz"
+    write_specs(path, {"test": h})
+
+    target_bin_edges = np.linspace(-2.0, 12.0, 8)
+    with pytest.raises(ValueError):
+        read_rebin_spectrum(path, target_bin_edges, "test")
+
+
 def test_get_rema(tmp_path):
     rema = (
         hist.Hist.new.Regular(10, 0, 100)
