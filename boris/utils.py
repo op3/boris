@@ -337,6 +337,78 @@ def create_matrix(
     return res
 
 
+class QuantityExtractor:
+    """Extract statistical quantities from a trace"""
+    def __init__(
+            self, *,
+            mean: bool = False,
+            median: bool = False,
+            variance: bool = False,
+            std_dev: bool = False,
+            min: bool = False,
+            max: bool = False,
+            hdi: bool = False,
+            hdi_prob: float = one_sigma):
+        """
+        Initialize QuantityExtractor
+
+        :param mean: Obtain mean value of trace
+        :param median: Obtain median value of trace
+        :param variance: Obtain variance of trace
+        :param std_dev: Obtain standard deviation of trace
+        :param min: Obtain minimum of trace
+        :param max: Obtain maximum of trace
+        :param hdi: Obtain highest density interval of trace
+        :param hdi_prob:
+            Probability for which the highest density interval will be computed.
+            Defaults to 1σ.
+        """
+        self.mean = mean
+        self.median = median
+        self.variance = variance
+        self.std_dev = std_dev
+        self.min = min
+        self.max = max
+        self.hdi = hdi
+        self.hdi_prob = hdi_prob
+
+    def extract(self, data, var_name: None | str = None):
+        """
+        Extract definied quantities form `data`.
+
+        :param data: Trace to extract quantities from
+        :param var_name: Optional
+        """
+        prefix = f"{var_name}_" if var_name else ""
+        res = {}
+
+        if self.mean:
+            res[f"{prefix}mean"] = data.mean(axis=1)
+
+        if self.median:
+            res[f"{prefix}median"] = np.median(data, axis=1)
+
+        if self.variance:
+            res[f"{prefix}variance"] = data.var(axis=1)
+        
+        if self.std_dev:
+            res[f"{prefix}std_dev"] = data.std(axis=1)
+        
+        if self.min:
+            res[f"{prefix}min"] = data.min(axis=1)
+        
+        if self.max:
+            res[f"{prefix}max"] = data.max(axis=1)
+
+        if self.hdi:
+            res[f"{prefix}hdi_lo"], res[f"{prefix}hdi_hi"] = hdi(
+                data.T, hdi_prob=self.hdi_prob
+            ).T
+
+        return res
+
+
+
 def get_quantities(
     trace_file: Path,
     var_name: str,

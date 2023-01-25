@@ -74,7 +74,7 @@ class Boris2SpecApp:
             help="Names of variables that are evaluated",
             type=str,
             nargs="*",
-            default=["incident"],
+            default=["spectrum", "incident_scaled_to_fep"],
         )
         parser.add_argument(
             "--plot",
