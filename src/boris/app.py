@@ -22,7 +22,7 @@
 import contextlib
 import logging
 from pathlib import Path
-from typing import Any, Callable, Generator, List, Mapping, Optional, Literal
+from typing import Any, Callable, Generator, Mapping, Literal
 
 import hist
 from tqdm import tqdm
@@ -30,7 +30,6 @@ from tqdm import tqdm
 from boris.utils import (
     create_matrix,
     get_rema,
-    get_quantities,
     one_sigma,
     read_rebin_spectrum,
     QuantityExtractor,
@@ -96,16 +95,16 @@ def boris(
     binning_factor: int,
     left: int,
     right: int,
-    histname: Optional[str] = None,
+    histname: str | None = None,
     rema_name: str = "rema",
-    background_spectrum: Optional[Path] = None,
-    background_name: Optional[str] = None,
+    background_spectrum: Path | None = None,
+    background_name: str | None = None,
     background_scale: float = 1.0,
-    calibration: List[float] | None = None,
+    calibration: list[float] | None = None,
     convention: Literal["edges", "centers"] = "edges",
-    matrix_alt: Optional[Path] = None,
+    matrix_alt: Path | None = None,
     force_overwrite: bool = False,
-    deconvolute: Optional[Callable[..., Mapping]] = None,
+    deconvolute: Callable[..., Mapping] | None = None,
     fit_beam=False,
     **kwargs: Any,
 ) -> None:
@@ -234,12 +233,12 @@ def sirob(
     binning_factor: int,
     left: int,
     right: int,
-    histname: Optional[str] = None,
+    histname: str | None = None,
     rema_name: str = "rema",
-    background_spectrum: Optional[Path] = None,
-    background_name: Optional[str] = None,
+    background_spectrum: Path | None = None,
+    background_name: str | None = None,
     background_scale: float = 1.0,
-    calibration: List[float] | None = None,
+    calibration: list[float] | None = None,
     convention: Literal["edges", "centers"] = "edges",
     force_overwrite: bool = False,
 ) -> None:
@@ -335,12 +334,12 @@ def sirob(
 
 def boris2spec(
     trace_file: Path,
-    output_path: Optional[Path] = None,
-    var_names: Optional[List[str]] = None,
-    plot: Optional[str] = None,
-    plot_title: Optional[str] = None,
-    plot_xlabel: Optional[str] = None,
-    plot_ylabel: Optional[str] = None,
+    output_path: Path | None = None,
+    var_names: list[str] | None = None,
+    plot: str | None = None,
+    plot_title: str | None = None,
+    plot_xlabel: str | None = None,
+    plot_ylabel: str | None = None,
     get_mean: bool = False,
     get_median: bool = False,
     # get_mode: bool = False,
@@ -391,10 +390,18 @@ def boris2spec(
     axis = hist.axis.Variable(edges, name="energy")
 
     qty_extractor = QuantityExtractor(
-        mean=get_mean, median=get_median, variance=get_variance, std_dev=get_std_dev, min=get_min, max=get_max, hdi=get_hdi, hdi_prob=hdi_prob)
+        mean=get_mean,
+        median=get_median,
+        variance=get_variance,
+        std_dev=get_std_dev,
+        min=get_min,
+        max=get_max,
+        hdi=get_hdi,
+        hdi_prob=hdi_prob,
+    )
 
     res = {}
-    for key, relation in trace.items():
+    for relation in trace.values():
         for var, data in relation.items():
             if var in var_names:
                 if data.ndim == 1:
@@ -402,15 +409,17 @@ def boris2spec(
                 elif data.ndim == 2:
                     res.update(qty_extractor.extract(data.values, var))
                 else:
-                    logger.error(f"Unknown dimension {data.ndim} with shape {data.shape} for '{var}'.")
+                    logger.error(
+                        f"Unknown dimension {data.ndim} with shape {data.shape} for '{var}'."
+                    )
 
-    
     specs = {
         key: (
             hist.Hist(axis, storage=hist.storage.Double(), data=val)
             if (val.ndim == 1 and val.shape[0] + 1 == edges.shape[0])
             else val
-        ) for key, val in res.items()
+        )
+        for key, val in res.items()
     }
 
     if output_path and res:
@@ -477,9 +486,9 @@ def boris2spec(
 def make_matrix(
     dat_file_path: Path,
     output_path: Path,
-    dets: Optional[List[str]] = None,
-    max_energy: Optional[float] = None,
-    sim_dir: Optional[Path] = None,
+    dets: list[str] | None = None,
+    max_energy: float | None = None,
+    sim_dir: Path | None = None,
     force_overwrite: bool = False,
 ) -> None:
     """

@@ -339,16 +339,19 @@ def create_matrix(
 
 class QuantityExtractor:
     """Extract statistical quantities from a trace"""
+
     def __init__(
-            self, *,
-            mean: bool = False,
-            median: bool = False,
-            variance: bool = False,
-            std_dev: bool = False,
-            min: bool = False,
-            max: bool = False,
-            hdi: bool = False,
-            hdi_prob: float = one_sigma):
+        self,
+        *,
+        mean: bool = False,
+        median: bool = False,
+        variance: bool = False,
+        std_dev: bool = False,
+        min: bool = False,
+        max: bool = False,
+        hdi: bool = False,
+        hdi_prob: float = one_sigma,
+    ):
         """
         Initialize QuantityExtractor
 
@@ -390,13 +393,13 @@ class QuantityExtractor:
 
         if self.variance:
             res[f"{prefix}variance"] = data.var(axis=1)
-        
+
         if self.std_dev:
             res[f"{prefix}std_dev"] = data.std(axis=1)
-        
+
         if self.min:
             res[f"{prefix}min"] = data.min(axis=1)
-        
+
         if self.max:
             res[f"{prefix}max"] = data.max(axis=1)
 
@@ -406,7 +409,6 @@ class QuantityExtractor:
             ).T
 
         return res
-
 
 
 def get_quantities(
