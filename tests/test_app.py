@@ -29,11 +29,11 @@ import arviz
 import hist
 
 import boris.app
-from boris.boris_app import BorisApp
-from boris.sirob_app import SirobApp
-from boris.boris2spec_app import Boris2SpecApp
-from boris.checkmatrix_app import CheckMatrixApp
-from boris.makematrix_app import MakeMatrixApp
+from boris.boris_app import boris_app
+from boris.sirob_app import sirob_app
+from boris.boris2spec_app import boris2spec_app
+from boris.checkmatrix_app import checkmatrix_app
+from boris.makematrix_app import makematrix_app
 from boris.app import (
     do_step,
     logger,
@@ -43,7 +43,6 @@ from boris.app import (
     sirob,
 )
 from boris.io import write_specs, read_spectrum
-from boris.utils import read_rebin_spectrum
 
 from tests.helpers.utils import create_simulations
 
@@ -51,11 +50,11 @@ from tests.helpers.utils import create_simulations
 @pytest.mark.parametrize(
     "app, name",
     [
-        (BorisApp, "boris"),
-        (CheckMatrixApp, "checkmatrix"),
-        (SirobApp, "sirob"),
-        (Boris2SpecApp, "boris2spec"),
-        (MakeMatrixApp, "makematrix"),
+        (boris_app, "boris"),
+        (checkmatrix_app, "checkmatrix"),
+        (sirob_app, "sirob"),
+        (boris2spec_app, "boris2spec"),
+        (makematrix_app, "makematrix"),
     ],
 )
 def test_help(app, name):

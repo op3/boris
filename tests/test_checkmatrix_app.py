@@ -26,11 +26,11 @@ import numpy as np
 import hist
 
 from boris.io import write_specs
-from boris.checkmatrix_app import CheckMatrixApp, init
+from boris.checkmatrix_app import checkmatrix_app
 
 
 @mock.patch("matplotlib.pyplot")
-def test_CheckMatrixApp_plot(mock_plt, tmp_path):
+def test_checkmatrix_app_plot(mock_plt, tmp_path):
     rema = (
         hist.Hist.new.Regular(10, 2000, 2200)
         .Regular(10, 2000, 2200)
@@ -45,13 +45,6 @@ def test_CheckMatrixApp_plot(mock_plt, tmp_path):
         "--binning-factor=2",
         str(tmp_path / "rema.npz"),
     ]
-    CheckMatrixApp()
+    checkmatrix_app()
     assert mock_plt.pcolormesh.called
     assert mock_plt.show.called
-
-
-@mock.patch("boris.checkmatrix_app.CheckMatrixApp")
-@mock.patch("boris.checkmatrix_app.__name__", "__main__")
-def test_app_init_CheckMatrixApp(app):
-    init()
-    assert app.called

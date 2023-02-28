@@ -20,12 +20,12 @@
 import sys
 from unittest import mock
 
-from boris.makematrix_app import MakeMatrixApp, init
+from boris.makematrix_app import makematrix_app
 
 from tests.helpers.utils import create_simulations
 
 
-def test_MakeMatrixApp(tmp_path):
+def test_makematrix_app(tmp_path):
     simulations = create_simulations(tmp_path)
 
     path = tmp_path / "sim.dat"
@@ -41,11 +41,4 @@ def test_MakeMatrixApp(tmp_path):
         str(path),
         str(tmp_path / "test.root"),
     ]
-    MakeMatrixApp()
-
-
-@mock.patch("boris.makematrix_app.MakeMatrixApp")
-@mock.patch("boris.makematrix_app.__name__", "__main__")
-def test_app_init_MakeMatrixApp(app):
-    init()
-    assert app.called
+    makematrix_app()

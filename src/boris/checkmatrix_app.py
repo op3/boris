@@ -23,77 +23,66 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 
-class CheckMatrixApp:
+def checkmatrix_app():
     """CLI interface for boris2spec."""
+    parser = argparse.ArgumentParser(
+        description="Display detector response matrix."
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="increase verbosity",
+        action="store_true",
+    )
+    parser.add_argument(
+        "matrixfile",
+        help="container file containing detector response matrix",
+        type=Path,
+    )
+    parser.add_argument(
+        "-l",
+        "--left",
+        help="crop response matrix to the lowest bin still containing LEFT (default: %(default)s)",
+        type=float,
+        default=0,
+    )
+    parser.add_argument(
+        "-r",
+        "--right",
+        help="crop response matrix to the highest bin not containing RIGHT (default: maximum energy of simulation)",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "-b",
+        "--binning-factor",
+        help="rebinning factor, group this many bins together (default: %(default)s)",
+        type=int,
+        default=10,
+    )
+    parser.add_argument(
+        "--rema-name",
+        help="name of the detector response matrix in matrix file  (default: %(default)s)",
+        default="rema",
+        nargs="?",
+        type=str,
+    )
+    args = parser.parse_args()
 
-    def __init__(self) -> None:
-        self.parse_args(sys.argv[1:])
-        from boris.app import setup_logging, check_matrix
+    from boris.app import setup_logging, check_matrix
 
-        setup_logging(self.args.verbose)
-        check_matrix(
-            self.args.matrixfile,
-            self.args.binning_factor,
-            self.args.left,
-            self.args.right,
-            self.args.rema_name,
-        )
-
-    def parse_args(self, args: list[str]):
-        """Parse CLI arguments."""
-        parser = argparse.ArgumentParser(
-            description="Display detector response matrix."
-        )
-        parser.add_argument(
-            "-v",
-            "--verbose",
-            help="increase verbosity",
-            action="store_true",
-        )
-        parser.add_argument(
-            "matrixfile",
-            help="container file containing detector response matrix",
-            type=Path,
-        )
-        parser.add_argument(
-            "-l",
-            "--left",
-            help="crop response matrix to the lowest bin still containing LEFT (default: %(default)s)",
-            type=float,
-            default=0,
-        )
-        parser.add_argument(
-            "-r",
-            "--right",
-            help="crop response matrix to the highest bin not containing RIGHT (default: maximum energy of simulation)",
-            type=float,
-            default=None,
-        )
-        parser.add_argument(
-            "-b",
-            "--binning-factor",
-            help="rebinning factor, group this many bins together (default: %(default)s)",
-            type=int,
-            default=10,
-        )
-        parser.add_argument(
-            "--rema-name",
-            help="name of the detector response matrix in matrix file  (default: %(default)s)",
-            default="rema",
-            nargs="?",
-            type=str,
-        )
-        self.args = parser.parse_args(args)
+    setup_logging(args.verbose)
+    check_matrix(
+        args.matrixfile,
+        args.binning_factor,
+        args.left,
+        args.right,
+        args.rema_name,
+    )
 
 
-def init():
-    """Run app if executed directly."""
-    if __name__ == "__main__":
-        CheckMatrixApp()
-
-
-init()
+if __name__ == "__main__":
+    exit(checkmatrix_app())  # pragma: no cover

@@ -24,10 +24,10 @@ import numpy as np
 import hist
 
 from boris.io import write_specs
-from boris.boris_app import BorisApp, init
+from boris.boris_app import boris_app
 
 
-def test_BorisApp(tmp_path):
+def test_boris_app(tmp_path):
     sys.argv = [
         "boris",
         "--seed=0",
@@ -77,7 +77,7 @@ def test_BorisApp(tmp_path):
     write_specs(tmp_path / "observed_wobg.npz", {"observed": observed_wobg})
     write_specs(tmp_path / "background.npz", {"background": background})
 
-    BorisApp()
+    boris_app()
     (tmp_path / "incident.npz").exists()
 
     sys.argv = [
@@ -91,12 +91,5 @@ def test_BorisApp(tmp_path):
         str(tmp_path / "observed_wobg.npz"),
         str(tmp_path / "incident_wobg.npz"),
     ]
-    BorisApp()
+    boris_app()
     assert (tmp_path / "incident_wobg.npz").exists()
-
-
-@mock.patch("boris.boris_app.BorisApp")
-@mock.patch("boris.boris_app.__name__", "__main__")
-def test_app_init_BorisApp(app):
-    init()
-    assert app.called

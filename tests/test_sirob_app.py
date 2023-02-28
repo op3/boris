@@ -21,18 +21,11 @@ import sys
 from unittest import mock
 
 import boris.app
-from boris.sirob_app import SirobApp, init
+from boris.sirob_app import sirob_app
 
 
 @mock.patch.object(boris.app, "sirob")
 def test_SirobApp(mock_sirob):
     sys.argv = ["sirob", "rema.npz", "incident.npz", "observed.npz"]
-    SirobApp()
+    sirob_app()
     assert mock_sirob.called
-
-
-@mock.patch("boris.sirob_app.SirobApp")
-@mock.patch("boris.sirob_app.__name__", "__main__")
-def test_app_init_SirobApp(app):
-    init()
-    assert app.called

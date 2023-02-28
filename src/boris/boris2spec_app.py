@@ -23,166 +23,155 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 import numpy as np
 
 
-class Boris2SpecApp:
+def boris2spec_app():
     """CLI interface for boris2spec."""
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="Create spectra from boris trace files",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="increase verbosity",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--var-names",
+        help="Names of variables that are evaluated",
+        type=str,
+        nargs="*",
+        default=["spectrum", "incident_scaled_to_fep"],
+    )
+    parser.add_argument(
+        "--plot",
+        help="Generate a matplotlib plot of the queried spectra. The plot is displayed interactively unless an output filename is given.",
+        type=str,
+        nargs="?",
+        const="",
+        default=None,
+        metavar="OUTPUT",
+    )
+    parser.add_argument(
+        "--plot-title",
+        help="Set plot title",
+        type=str,
+    )
+    parser.add_argument(
+        "--plot-xlabel",
+        help="Set plot x-axis label",
+        type=str,
+    )
+    parser.add_argument(
+        "--plot-ylabel",
+        help="Set plot y-axis label",
+        type=str,
+    )
+    parser.add_argument(
+        "--get-mean",
+        help="Get the mean for each bin",
+        action="store_true",
+    )
+    # parser.add_argument(
+    #    "--get-mode",
+    #    help="Get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
+    #    action="store_true",
+    # )
+    parser.add_argument(
+        "--get-median",
+        help="Get the median for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--get-variance",
+        help="Get the variance for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--get-std-dev",
+        help="Get the standard deviation for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--get-min",
+        help="Get the minimum for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--get-max",
+        help="Get the maximum for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--get-hdi",
+        help="Get the highest density interval for each bin",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--hdi-prob",
+        metavar="PROB",
+        help="HDI prob for which interval will be computed",
+        default=np.math.erf(np.sqrt(0.5)),
+    )
+    parser.add_argument(
+        "--force-overwrite",
+        help="Overwrite existing files without warning",
+        action="store_true",
+    )
 
-    def __init__(self) -> None:
-        self.parse_args(sys.argv[1:])
-        from boris.app import setup_logging, boris2spec
+    parser.add_argument(
+        "trace_file",
+        help="boris output containing traces",
+        type=Path,
+    )
+    parser.add_argument(
+        "output_path",
+        help="Write resulting spectra to this file (multiple files are created for each exported spectrum if txt format is used)",
+        type=Path,
+        nargs="?",
+    )
 
-        setup_logging(self.args.verbose)
-        boris2spec(
-            self.args.trace_file,
-            self.args.output_path,
-            self.args.var_names,
-            self.args.plot,
-            self.args.plot_title,
-            self.args.plot_xlabel,
-            self.args.plot_ylabel,
-            self.args.get_mean,
-            self.args.get_median,
-            # self.args.get_mode,
-            self.args.get_variance,
-            self.args.get_std_dev,
-            self.args.get_min,
-            self.args.get_max,
-            self.args.get_hdi,
-            self.args.hdi_prob,
-            self.args.force_overwrite,
-        )
+    args = parser.parse_args()
+    if args.plot is None and args.output_path is None:
+        parser.error("Please specify output_path and/or use --plot option")
 
-    def parse_args(self, args: list[str]):
-        """Parse CLI arguments."""
-        parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description="Create spectra from boris trace files",
-        )
-        parser.add_argument(
-            "-v",
-            "--verbose",
-            help="increase verbosity",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--var-names",
-            help="Names of variables that are evaluated",
-            type=str,
-            nargs="*",
-            default=["spectrum", "incident_scaled_to_fep"],
-        )
-        parser.add_argument(
-            "--plot",
-            help="Generate a matplotlib plot of the queried spectra. The plot is displayed interactively unless an output filename is given.",
-            type=str,
-            nargs="?",
-            const="",
-            default=None,
-            metavar="OUTPUT",
-        )
-        parser.add_argument(
-            "--plot-title",
-            help="Set plot title",
-            type=str,
-        )
-        parser.add_argument(
-            "--plot-xlabel",
-            help="Set plot x-axis label",
-            type=str,
-        )
-        parser.add_argument(
-            "--plot-ylabel",
-            help="Set plot y-axis label",
-            type=str,
-        )
-        parser.add_argument(
-            "--get-mean",
-            help="Get the mean for each bin",
-            action="store_true",
-        )
-        # parser.add_argument(
-        #    "--get-mode",
-        #    help="Get the mode for each bin. Requires a lot of statistics to be sufficiently robust",
-        #    action="store_true",
-        # )
-        parser.add_argument(
-            "--get-median",
-            help="Get the median for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-variance",
-            help="Get the variance for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-std-dev",
-            help="Get the standard deviation for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-min",
-            help="Get the minimum for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-max",
-            help="Get the maximum for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--get-hdi",
-            help="Get the highest density interval for each bin",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--hdi-prob",
-            metavar="PROB",
-            help="HDI prob for which interval will be computed",
-            default=np.math.erf(np.sqrt(0.5)),
-        )
-        parser.add_argument(
-            "--force-overwrite",
-            help="Overwrite existing files without warning",
-            action="store_true",
-        )
+    if not (
+        args.get_mean
+        or args.get_median
+        # or args.get_mode
+        or args.get_variance
+        or args.get_std_dev
+        or args.get_hdi
+    ):
+        parser.error("Nothing to do, please give some --get-* options")
 
-        parser.add_argument(
-            "trace_file",
-            help="boris output containing traces",
-            type=Path,
-        )
-        parser.add_argument(
-            "output_path",
-            help="Write resulting spectra to this file (multiple files are created for each exported spectrum if txt format is used)",
-            type=Path,
-            nargs="?",
-        )
+    from boris.app import setup_logging, boris2spec
 
-        self.args = parser.parse_args(args)
-        if self.args.plot is None and self.args.output_path is None:
-            parser.error("Please specify output_path and/or use --plot option")
-
-        if not (
-            self.args.get_mean
-            or self.args.get_median
-            # or self.args.get_mode
-            or self.args.get_variance
-            or self.args.get_std_dev
-            or self.args.get_hdi
-        ):
-            parser.error("Nothing to do, please give some --get-* options")
+    setup_logging(args.verbose)
+    boris2spec(
+        args.trace_file,
+        args.output_path,
+        args.var_names,
+        args.plot,
+        args.plot_title,
+        args.plot_xlabel,
+        args.plot_ylabel,
+        args.get_mean,
+        args.get_median,
+        # args.get_mode,
+        args.get_variance,
+        args.get_std_dev,
+        args.get_min,
+        args.get_max,
+        args.get_hdi,
+        args.hdi_prob,
+        args.force_overwrite,
+    )
 
 
-def init():
-    """Run app if executed directly."""
-    if __name__ == "__main__":
-        Boris2SpecApp()
-
-
-init()
+if __name__ == "__main__":
+    exit(boris2spec_app())  # pragma: no cover

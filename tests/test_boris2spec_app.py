@@ -25,12 +25,12 @@ from unittest import mock
 import numpy as np
 
 from boris.io import read_spectrum, write_specs
-from boris.boris2spec_app import Boris2SpecApp, init
+from boris.boris2spec_app import boris2spec_app
 
 pytest.skip(allow_module_level=True)
 
 
-def test_Boris2SpecApp(tmp_path):
+def test_boris2spec_app(tmp_path):
     incident = np.ones((100, 10))
     other = np.ones(100)
     bin_edges = np.linspace(2000, 2200, 11)
@@ -55,7 +55,7 @@ def test_Boris2SpecApp(tmp_path):
         str(tmp_path / "incident.npz"),
         str(tmp_path / "output.npz"),
     ]
-    Boris2SpecApp()
+    boris2spec_app()
     assert (tmp_path / "output.npz").exists()
     mean, (bin_edges,) = read_spectrum(tmp_path / "output.npz", "incident_mean")
     assert np.isclose(mean, np.ones(10)).all()
@@ -70,7 +70,7 @@ def test_Boris2SpecApp(tmp_path):
 
 
 @mock.patch("matplotlib.pyplot.show")
-def test_Boris2SpecApp_plot(mock_plt, tmp_path):
+def test_boris2spec_app_plot(mock_plt, tmp_path):
     incident = np.ones((100, 10))
     other = np.ones(10)
     bin_edges = np.linspace(2000, 2200, 11)
@@ -91,12 +91,12 @@ def test_Boris2SpecApp_plot(mock_plt, tmp_path):
         "--",
         str(tmp_path / "incident.npz"),
     ]
-    Boris2SpecApp()
+    boris2spec_app()
     assert mock_plt.called
 
 
 @mock.patch("matplotlib.pyplot.savefig")
-def test_Boris2SpecApp_plot_export(mock_plt, tmp_path):
+def test_boris2spec_app_plot_export(mock_plt, tmp_path):
     incident = np.ones((100, 10))
     other = np.ones(10)
     bin_edges = np.linspace(2000, 2200, 11)
@@ -123,14 +123,14 @@ def test_Boris2SpecApp_plot_export(mock_plt, tmp_path):
         "Counts",
         str(tmp_path / "incident.npz"),
     ]
-    Boris2SpecApp()
+    boris2spec_app()
     assert mock_plt.called
 
 
-def test_Boris2SpecApp_wrong_args(tmp_path):
+def test_boris2spec_app_wrong_args(tmp_path):
     sys.argv = ["boris2spec", str(tmp_path / "incident.npz")]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        Boris2SpecApp()
+        boris2spec_app()
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 2
 
@@ -140,13 +140,6 @@ def test_Boris2SpecApp_wrong_args(tmp_path):
         str(tmp_path / "output.npz"),
     ]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        Boris2SpecApp()
+        boris2spec_app()
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 2
-
-
-@mock.patch("boris.boris2spec_app.Boris2SpecApp")
-@mock.patch("boris.boris2spec_app.__name__", "__main__")
-def test_app_init_Boris2SpecApp(app):
-    init()
-    assert app.called
