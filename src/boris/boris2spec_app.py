@@ -118,6 +118,20 @@ def boris2spec_app():
         default=np.math.erf(np.sqrt(0.5)),
     )
     parser.add_argument(
+        "--burn",
+        metavar="NUMBER",
+        help="Skip initial NUMBER of samples to account for burn-in phase during sampling",
+        type=int,
+        default=1000,
+    )
+    parser.add_argument(
+        "--thin",
+        metavar="FACTOR",
+        help="Thin trace by FACTOR before evaluating to reduce autocorrelation",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
         "--force-overwrite",
         help="Overwrite existing files without warning",
         action="store_true",
@@ -169,6 +183,8 @@ def boris2spec_app():
         args.get_max,
         args.get_hdi,
         args.hdi_prob,
+        args.burn,
+        args.thin,
         args.force_overwrite,
     )
 

@@ -349,6 +349,8 @@ def boris2spec(
     get_max: bool = False,
     get_hdi: bool = False,
     hdi_prob: float = one_sigma,
+    burn: int = 1000,
+    thin: int = 1,
     force_overwrite: bool = False,
 ) -> None:
     """
@@ -407,7 +409,9 @@ def boris2spec(
                 if data.ndim == 1:
                     res[var] = data
                 elif data.ndim == 2:
-                    res.update(qty_extractor.extract(data.values, var))
+                    res.update(
+                        qty_extractor.extract(data.values[..., burn::thin], var)
+                    )
                 else:
                     logger.error(
                         f"Unknown dimension {data.ndim} with shape {data.shape} for '{var}'."
@@ -564,8 +568,8 @@ def check_matrix(
     vmin = np.nanquantile(rema.values()[rema.values() > 1e-20], 0.01)
     vmax = np.nanmax(rema.values())
     plt.pcolormesh(
-        rema.axes[0].edges,
         rema.axes[1].edges,
+        rema.axes[0].edges,
         rema,
         cmap="viridis_r",
         norm=LogNorm(vmin=vmin, vmax=vmax),
