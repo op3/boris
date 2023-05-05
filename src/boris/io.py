@@ -431,7 +431,7 @@ def write_specs_hdf5(path: Path, objs: Mapping[str, hist.BaseHist]) -> None:
                 else:
                     specfile[key].attrs["edges"] = ax.edges
             else:
-                warnings.warn(f"Cannot write {key}")
+                warnings.warn(f"Cannot write {key}", stacklevel=2)
 
 
 def write_specs_npz(path: Path, objs: Mapping[str, hist.BaseHist]) -> None:
@@ -454,7 +454,7 @@ def write_specs_npz(path: Path, objs: Mapping[str, hist.BaseHist]) -> None:
             else:
                 specfile[f"{key}_edges"] = ax.edges
         else:
-            warnings.warn(f"Cannot write {key}")
+            warnings.warn(f"Cannot write {key}", stacklevel=2)
     np.savez_compressed(path, **specfile)
 
 
@@ -531,7 +531,7 @@ class SimInfo:
 
         :param line:
             Single line of dat file in format
-            ``<histogram>: <energy> <number of events``.
+            ``<histogram>: <energy> [<number of events>]``.
         :param sim_root:
             Root of simulation directory. Paths are given
             relative to this directory.

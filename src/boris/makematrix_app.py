@@ -63,7 +63,7 @@ def makematrix_app():
         "datfile",
         help=(
             "datfile containing simulation information, each line has format "
-            "`<simulation_hists.root>: <energy> <number of particles`"
+            "`<simulation_hists.root>: <energy> [<number of particles>]`"
         ),
         type=Path,
     )

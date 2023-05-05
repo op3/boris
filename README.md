@@ -49,28 +49,28 @@ $ boris --help
 usage: boris [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--rema-name [REMA_NAME]]
-             [--norm-hist [NORM_HIST]] [--matrixfile-alt [MATRIXFILE_ALT]]
+             [--matrixfile-alt [MATRIXFILE_ALT]]
              [--cal-bin-centers C0 [C1 ...] | --cal-bin-edges C0 [C1 ...]]
-             [-s SEED] [-c CORES] [--thin THIN] [--tune TUNE] [--burn BURN]
-             [-n NDRAWS] [--fit-beam] [--force-overwrite]
+             [-s SEED] [-c CORES] [--tune TUNE] [-n NDRAWS] [--fit-beam]
+             [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
-Deconvolute observed_spectrum using the supplied detector response
-matrix.
+Deconvolute observed_spectrum using the supplied detector response matrix.
 
 positional arguments:
   matrixfile            container file containing detector response matrix
   observed_spectrum     file containing the observed spectrum
-  incident_spectrum     write trace of incident spectrum to this path
+  incident_spectrum     write trace of incident spectrum to this path (.nc
+                        file)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -v, --verbose         increase verbosity
-  -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
+  -l LEFT, --left LEFT  crop spectrum to the lowest bin still containing LEFT
                         (default: 0)
   -r RIGHT, --right RIGHT
-                        maximum upper edge of last bin of deconvoluted
-                        spectrum (default: maximum energy of simulation)
+                        crop spectrum to the highest bin not containing RIGHT
+                        (default: maximum energy of simulation)
   -b BINNING_FACTOR, --binning-factor BINNING_FACTOR
                         rebinning factor, group this many bins together
                         (default: 10)
@@ -86,10 +86,6 @@ optional arguments:
   --rema-name [REMA_NAME]
                         name of the detector response matrix in matrix file
                         (default: rema)
-  --norm-hist [NORM_HIST]
-                        divide detector response matrix by this histogram (e.
-                        g., to correct for number of simulated particles)
-                        (optional) (default: None)
   --matrixfile-alt [MATRIXFILE_ALT]
                         Load an additional detector response matrix from this
                         matrix file (same rema-name as main matrix). Boris
@@ -109,10 +105,7 @@ advanced arguments:
   -s SEED, --seed SEED  set random seed
   -c CORES, --cores CORES
                         number of cores to utilize (default: 1)
-  --thin THIN           thin the resulting trace by a factor (default: 1)
   --tune TUNE           number of initial steps used to tune the model
-                        (default: 1000)
-  --burn BURN           number of initial steps to discard (burn-in phase)
                         (default: 1000)
   -n NDRAWS, --ndraws NDRAWS
                         number of samples to draw per core (default: 2000)
@@ -127,7 +120,7 @@ usage: sirob [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--bg-spectrum BG_SPECTRUM] [--bg-hist BG_HIST]
              [--bg-scale BG_SCALE] [--cal-bin-centers C0 [C1 ...] |
              --cal-bin-edges C0 [C1 ...]] [--rema-name [REMA_NAME]]
-             [--norm-hist [NORM_HIST]] [--force-overwrite]
+             [--force-overwrite]
              matrixfile incident_spectrum observed_spectrum
 
 positional arguments:
@@ -135,14 +128,15 @@ positional arguments:
   incident_spectrum     file containing the incident spectrum
   observed_spectrum     write observed (convoluted) spectrum to this path
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -v, --verbose         increase verbosity (default: False)
-  -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
+  -l LEFT, --left LEFT  crop spectrum to the lowest bin still containing LEFT
                         (default: 0)
   -r RIGHT, --right RIGHT
-                        maximum upper edge of last bin of deconvoluted
-                        spectrum (default: None)
+                        crop spectrum to the highest bin not containing RIGHT
+                        (default: maximum energy of simulation) (default:
+                        None)
   -b BINNING_FACTOR, --binning-factor BINNING_FACTOR
                         rebinning factor, group this many bins together
                         (default: 10)
@@ -165,10 +159,6 @@ optional arguments:
   --rema-name [REMA_NAME]
                         Name of the detector response matrix in matrix file
                         (default: rema)
-  --norm-hist [NORM_HIST]
-                        Divide detector response matrix by this histogram (e.
-                        g., to correct for number of simulated particles)
-                        (default: None)
   --force-overwrite     Overwrite existing files without warning (default:
                         False)
 ```
@@ -180,25 +170,25 @@ This file can be created by the `makematrix` program:
 
 ```bash
 $ makematrix --help
-usage: makematrix [-h] [--sim-dir SIM_DIR] [--scale-hist-axis SCALE_HIST_AXIS]
-                  [--detector [DETECTOR [DETECTOR ...]]]
+usage: makematrix [-h] [-v] [--sim-dir SIM_DIR] [--detector [DETECTOR ...]]
                   [--max-energy [MAX_ENERGY]] [--force-overwrite]
                   datfile output_path
 
+Create a detector response matrix from multiple simulated spectra for
+different energies.
+
 positional arguments:
   datfile               datfile containing simulation information, each line
-                        has format `<simulation_hists.root>: <energy> <number
-                        of particles`
+                        has format `<simulation_hists.root>: <energy> [<number
+                        of particles>]`
   output_path           Write resulting response matrix to this file.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
+  -v, --verbose         increase verbosity
   --sim-dir SIM_DIR     simulation file names are given relative to this
                         directory (default: Directory containing datfile)
-  --scale-hist-axis SCALE_HIST_AXIS
-                        Scale energy axis of histograms in case a different
-                        unit is used by the simulation (default: 1.0)
-  --detector [DETECTOR [DETECTOR ...]]
+  --detector [DETECTOR ...]
                         Names of histograms to create response matrices for
                         (default: All available histograms)
   --max-energy [MAX_ENERGY]
@@ -237,11 +227,15 @@ the `boris2spec` tool is provided:
 
 ```bash
 $ boris2spec --help
-usage: boris2spec [-h] [--var-names [VAR_NAMES [VAR_NAMES ...]]] [--plot]
-                  [--get-mean] [--get-median] [--get-variance] [--get-std-dev]
-                  [--get-min] [--get-max] [--get-hdi] [--hdi-prob PROB]
-                  [--force-overwrite]
+usage: boris2spec [-h] [-v] [--var-names [VAR_NAMES ...]] [--plot [OUTPUT]]
+                  [--plot-title PLOT_TITLE] [--plot-xlabel PLOT_XLABEL]
+                  [--plot-ylabel PLOT_YLABEL] [--get-mean] [--get-median]
+                  [--get-variance] [--get-std-dev] [--get-min] [--get-max]
+                  [--get-hdi] [--hdi-prob PROB] [--burn NUMBER]
+                  [--thin FACTOR] [--force-overwrite]
                   trace_file [output_path]
+
+Create spectra from boris trace files
 
 positional arguments:
   trace_file            boris output containing traces
@@ -249,13 +243,21 @@ positional arguments:
                         are created for each exported spectrum if txt format
                         is used) (default: None)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --var-names [VAR_NAMES [VAR_NAMES ...]]
+  -v, --verbose         increase verbosity (default: False)
+  --var-names [VAR_NAMES ...]
                         Names of variables that are evaluated (default:
-                        ['incident'])
-  --plot                Display a matplotlib plot of the queried spectra
-                        (default: False)
+                        ['spectrum', 'incident_scaled_to_fep'])
+  --plot [OUTPUT]       Generate a matplotlib plot of the queried spectra. The
+                        plot is displayed interactively unless an output
+                        filename is given. (default: None)
+  --plot-title PLOT_TITLE
+                        Set plot title (default: None)
+  --plot-xlabel PLOT_XLABEL
+                        Set plot x-axis label (default: None)
+  --plot-ylabel PLOT_YLABEL
+                        Set plot y-axis label (default: None)
   --get-mean            Get the mean for each bin (default: False)
   --get-median          Get the median for each bin (default: False)
   --get-variance        Get the variance for each bin (default: False)
@@ -267,6 +269,10 @@ optional arguments:
                         (default: False)
   --hdi-prob PROB       HDI prob for which interval will be computed (default:
                         0.682689492137086)
+  --burn NUMBER         Skip initial NUMBER of samples to account for burn-in
+                        phase during sampling (default: 1000)
+  --thin FACTOR         Thin trace by FACTOR before evaluating to reduce
+                        autocorrelation (default: 1)
   --force-overwrite     Overwrite existing files without warning (default:
                         False)
 ```
@@ -280,8 +286,8 @@ Furthermore, the `checkmatrix` tool is available to view detector response matri
 
 ```bash
 $ checkmatrix --help
-usage: checkmatrix [-h] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR]
-                   [--rema-name [REMA_NAME]] [--norm-hist [NORM_HIST]]
+usage: checkmatrix [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR]
+                   [--rema-name [REMA_NAME]]
                    matrixfile
 
 Display detector response matrix.
@@ -289,23 +295,20 @@ Display detector response matrix.
 positional arguments:
   matrixfile            container file containing detector response matrix
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -l LEFT, --left LEFT  lower edge of first bin of deconvoluted spectrum
-                        (default: 0)
+  -v, --verbose         increase verbosity
+  -l LEFT, --left LEFT  crop response matrix to the lowest bin still
+                        containing LEFT (default: 0)
   -r RIGHT, --right RIGHT
-                        maximum upper edge of last bin of deconvoluted
-                        spectrum (default: maximum energy of simulation)
+                        crop response matrix to the highest bin not containing
+                        RIGHT (default: maximum energy of simulation)
   -b BINNING_FACTOR, --binning-factor BINNING_FACTOR
                         rebinning factor, group this many bins together
                         (default: 10)
   --rema-name [REMA_NAME]
                         name of the detector response matrix in matrix file
                         (default: rema)
-  --norm-hist [NORM_HIST]
-                        divide detector response matrix by this histogram (e.
-                        g., to correct for number of simulated particles)
-                        (optional) (default: None)
 ```
 
 ### Beam profile model
@@ -335,7 +338,7 @@ def beam_profile_model(x, pos, vol, sigma, tl):
 
 ## License
 
-Copyright © 2020–2021
+Copyright © 2020–2023
 
 Oliver Papst `<opapst@ikp.tu-darmstadt.de>`
 
