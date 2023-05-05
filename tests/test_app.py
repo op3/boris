@@ -25,7 +25,6 @@ from importlib.util import find_spec
 from pathlib import Path
 
 import numpy as np
-import arviz
 import hist
 
 import boris.app
@@ -47,6 +46,22 @@ from boris.io import write_specs, read_spectrum
 from tests.helpers.utils import create_simulations
 
 
+@pytest.fixture
+def rema():
+    return (
+        hist.Hist.new.Regular(10, 2000.0, 2200.0)
+        .Regular(10, 2000.0, 2200.0)
+        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
+    )
+
+
+@pytest.fixture
+def incident():
+    return hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
+        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
+    )
+
+
 @pytest.mark.parametrize(
     "app, name",
     [
@@ -65,15 +80,7 @@ def test_help(app, name):
     assert pytest_wrapped_e.value.code == 0
 
 
-def test_sirob(tmp_path):
-    rema = (
-        hist.Hist.new.Regular(10, 2000.0, 2200.0)
-        .Regular(10, 2000.0, 2200.0)
-        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
-    )
-    incident = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
-        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
-    )
+def test_sirob(rema, incident, tmp_path):
     write_specs(tmp_path / "rema.npz", {"rema": rema})
     write_specs(tmp_path / "incident.npz", {"incident": incident})
     sirob(
@@ -141,15 +148,7 @@ def test_do_step():
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_boris(tmp_path):
-    rema = (
-        hist.Hist.new.Regular(10, 2000.0, 2200.0)
-        .Regular(10, 2000.0, 2200.0)
-        .Double(data=0.1 * np.diag(np.ones(10)) + 0.01 * np.diag(np.ones(8), 2))
-    )
-    incident = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
-        data=np.random.uniform(10, 1000, size=10).astype(np.int64)
-    )
+def test_boris(rema, incident, tmp_path):
     observed = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
         data=(incident.values() @ rema.values()).astype(np.int64)
     )
@@ -160,7 +159,7 @@ def test_boris(tmp_path):
     boris.app.boris(
         tmp_path / "rema.npz",
         tmp_path / "observed.npz",
-        tmp_path / "incident.npz",
+        tmp_path / "incident.nc",
         1,
         2000,
         2200,
@@ -168,7 +167,7 @@ def test_boris(tmp_path):
         tune=10,
         cores=1,
     )
-    assert (tmp_path / "incident.npz").exists()
+    assert (tmp_path / "incident.nc").exists()
 
     background = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
@@ -182,16 +181,33 @@ def test_boris(tmp_path):
     boris.app.boris(
         tmp_path / "rema.npz",
         tmp_path / "observed_bg.npz",
-        tmp_path / "incident_bg.npz",
-        1,
+        tmp_path / "incident_bg.nc",
+        10,
         2000,
         2200,
-        ndraws=10,
-        tune=10,
+        ndraws=1000,
+        tune=200,
         cores=1,
         background_spectrum=tmp_path / "background.npz",
     )
-    assert (tmp_path / "incident_bg.npz").exists()
+    assert (tmp_path / "incident_bg.nc").exists()
+
+    boris.app.boris2spec(
+        tmp_path / "incident_bg.nc",
+        tmp_path / "output.root",
+        # plot="plot.png",
+        # plot_title="title",
+        # plot_xlabel="xlabel",
+        # plot_ylabel="ylabel",
+        get_mean=True,
+        get_median=True,
+        get_variance=True,
+        get_std_dev=True,
+        get_min=True,
+        get_max=True,
+        get_hdi=True,
+    )
+    assert (tmp_path / "output.root").exists()
 
 
 @pytest.mark.parametrize(
