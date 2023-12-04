@@ -81,7 +81,14 @@ def read_rebin_spectrum(
     """
     spectrum = read_spectrum(path, histname)
     if spectrum.values().dtype != int:
-        raise ValueError("Spectrum contents are not of type integer.")
+        spectrum_new = hist.Hist(
+            *spectrum.axes,
+            storage=hist.storage.Int64(),
+            data=spectrum.values().astype(int),
+        )
+        if not np.allclose(spectrum, spectrum_new):
+            raise ValueError("Spectrum contents are not of type integer.")
+        spectrum = spectrum_new
     if (spectrum.values() < 0).any():
         raise ValueError("Spectrum contents are not non-negative.")
 
