@@ -72,6 +72,7 @@ def deconvolute(
     background_scale: float = 1.0,
     rema_alt: np.ndarray | None = None,
     fit_beam: bool = False,
+    regularize: bool = False,
     ndraws: int = 10000,
     **kwargs,
 ) -> InferenceData:
@@ -86,6 +87,10 @@ def deconvolute(
     :param rema_alt:
         Alternative matrix that is used to create a linear combination
         of two matrices (interpolate between both matrices).
+    :param fit_beam: Fit a gaussian beam profile in addition to the
+        fitted incoming spectrum.
+    :param regularize:
+        Use exponential instead of half flat priors to suppress empty bins.
     :param ndraws: Number of draws to sample
     :param \**kwargs: Keyword arguments are passed to ``PyMC3.sample``.
 
@@ -106,9 +111,14 @@ def deconvolute(
 
     with pm.Model():
         # Model parameter
-        incident = pm.Exponential(
-            "incident", incident_normalization, shape=spectrum.shape[0]
-        )
+        if regularize:
+            incident = pm.Exponential(
+                "incident", incident_normalization, shape=spectrum.shape[0]
+            )
+        else:
+            incident = pm.HalfFlat(
+                "incident", shape=spectrum.shape[0]
+            )
         if rema_alt is None:
             rema_eff = rema
             rema_eff_diag = np.diag(rema)
@@ -122,11 +132,17 @@ def deconvolute(
         if background is None:
             folded_plus_bg = folded
         else:
-            background_inc = pm.Exponential(
-                "background_incident",
-                background_normalization,
-                shape=background.shape[0],
-            )
+            if regularize:
+                background_inc = pm.Exponential(
+                    "background_incident",
+                    background_normalization,
+                    shape=background.shape[0],
+                )
+            else:
+                background_inc = pm.HalfFlat(
+                    "background_incident",
+                    shape=background.shape[0],
+                )
             folded_plus_bg = pm.Deterministic(
                 "folded_plus_bg", folded + background_scale * background_inc
             )
