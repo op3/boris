@@ -551,8 +551,7 @@ def check_matrix(
     :param right:
         Crop response matrix to the highest bin not containing ``right``.
     :param rema_name:
-        Name of the detector response matrix in matrix file
-        (only required if not unique).
+        Name of the detector response matrix in matrix file.
     """
     import numpy as np
     import matplotlib.pyplot as plt

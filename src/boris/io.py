@@ -511,6 +511,8 @@ def load_rema(
     :return: Response matrix
     """
     rema = read_spectrum(path, key_rema)
+    rema.axes[0].label = "Incoming energy"
+    rema.axes[1].label = "Observed energy"
     if rema.ndim != 2 or not (rema.axes[0].edges == rema.axes[1].edges).all():
         raise ValueError("Wrong response matrix dimension")
     return rema
