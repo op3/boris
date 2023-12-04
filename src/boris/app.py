@@ -30,6 +30,7 @@ from tqdm import tqdm
 from boris.utils import (
     create_matrix,
     get_rema,
+    mult_rema,
     one_sigma,
     read_rebin_spectrum,
     QuantityExtractor,
@@ -206,12 +207,12 @@ def boris(
         if fit is None:
             from boris.core import fit
         trace = fit(
-            rema.values(),
+            rema.values()[::-1, ::-1],
             spectrum.values(),
             rema.axes[0].edges,
             background.values() if background else None,
             background_scale,
-            rema_alt.values() if rema_alt else None,
+            rema_alt.values()[::-1, ::-1] if rema_alt else None,
             fit_beam,
             **kwargs,
         )
@@ -320,7 +321,7 @@ def sirob(
 
     with do_step("Calculating observed (convoluted) spectrum"):
         observed = hist.Hist(rema.axes[0], storage=hist.storage.Double())
-        observed.values()[:] = incident.values() @ rema.values()
+        observed.values()[:] = mult_rema(rema, incident)
         if background is not None:
             observed.values()[:] += background_scale * background.values()
 

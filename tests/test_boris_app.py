@@ -26,6 +26,8 @@ import hist
 from boris.io import write_specs
 from boris.boris_app import boris_app
 
+from boris.utils import mult_rema
+
 
 def test_boris_app(tmp_path):
     sys.argv = [
@@ -63,12 +65,10 @@ def test_boris_app(tmp_path):
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
     )
     observed_wobg = hist.Hist.new.Regular(10, 2000, 2200).Int64(
-        data=(incident.values() @ rema.values()).astype(np.int64)
+        data=mult_rema(rema, incident).astype(np.int64)
     )
     observed = hist.Hist.new.Regular(10, 2000, 2200).Int64(
-        data=(background.values() + incident.values() @ rema.values()).astype(
-            np.int64
-        )
+        data=mult_rema(rema, background + incident).astype(np.int64)
     )
 
     write_specs(tmp_path / "rema.npz", {"rema": rema})

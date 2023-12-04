@@ -159,7 +159,7 @@ def boris_app():
     )
     parser.add_argument(
         "incident_spectrum",
-        help="write trace of incident spectrum to this path (.nc file)",
+        help="write trace of incident spectrum to this path (.h5 file)",
         type=Path,
     )
 

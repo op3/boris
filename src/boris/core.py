@@ -39,7 +39,7 @@ def theuerkauf_norm(sigma, tl):
     Normalization factor for Theuerkauf peak shape
     """
     return 1 / (
-        (sigma ** 2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma ** 2))
+        (sigma**2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma**2))
         + pt.sqrt(np.pi / 2.0)
         * sigma
         * (1 + pt.erf(tl / (pt.sqrt(2.0) * sigma)))
@@ -58,8 +58,8 @@ def theuerkauf(x, pos, vol, sigma, tl):
     norm = theuerkauf_norm(sigma, tl)
     _x = pt.switch(
         dx < -tl,
-        tl / (sigma ** 2) * (dx + tl / 2.0),
-        -dx * dx / (2.0 * sigma ** 2),
+        tl / (sigma**2) * (dx + tl / 2.0),
+        -dx * dx / (2.0 * sigma**2),
     )
     return vol * norm * pt.exp(_x)
 
@@ -117,15 +117,18 @@ def fit(
             )
         else:
             incident = pm.HalfFlat("incident", shape=spectrum.shape[0])
+
         if rema_alt is None:
             rema_eff = rema
-            rema_eff_diag = np.diag(rema)
+            rema_eff_diag = np.diag(rema_eff)
         else:
             interpolation = pm.Uniform("interpolation", 0, 1, shape=())
             rema_eff = (1 - interpolation) * rema + interpolation * rema_alt
             rema_eff_diag = (1 - interpolation) * np.diag(
                 rema
             ) + interpolation * np.diag(rema_alt)
+
+        # rema_eff = pm.ConstantData("rema", rema_eff)
         folded = pm.Deterministic("folded", incident @ rema_eff)
         if background is None:
             folded_plus_bg = folded
@@ -211,7 +214,6 @@ def fit(
             ndraws,
             step=step,
             start=start,
-            return_inferencedata=True,
             idata_kwargs=dict(log_likelihood=True),
             **kwargs,
         )

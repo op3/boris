@@ -61,7 +61,7 @@ Reconstruct incident_spectrum based on observed_spectrum using the supplied dete
 positional arguments:
   matrixfile            container file containing detector response matrix
   observed_spectrum     file containing the observed spectrum
-  incident_spectrum     write trace of incident spectrum to this path (.nc
+  incident_spectrum     write trace of incident spectrum to this path (.h5
                         file)
 
 options:

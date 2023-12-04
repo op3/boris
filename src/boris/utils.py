@@ -486,3 +486,28 @@ def get_quantities(
         ).T
 
     return res
+
+
+def mult_rema(
+    rema: hist.hist.Hist, incident_spec: hist.hist.Hist
+) -> np.ndarray:
+    """
+    Apply a response matrix to an incident spectrum
+
+    :param rema: Detector response matrix
+    :param spec: Incident spectrum
+    """
+    return rema.values()[::-1, ::-1] @ incident_spec.values()
+
+
+def mult_rema_inv(
+    rema: hist.hist.Hist, observed_spec: hist.hist.Hist
+) -> np.ndarray:
+    """
+    Apply the inverse of a response matrix to an observed spectrum
+
+    :param rema: Detector response matrix
+    :param spec: Observed spectrum
+    """
+    rema_inv = np.linalg.inv(rema.values()[::-1, ::-1])
+    return observed_spec.values() @ rema_inv

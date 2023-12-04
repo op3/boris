@@ -42,6 +42,7 @@ from boris.app import (
     sirob,
 )
 from boris.io import write_specs, read_spectrum
+from boris.utils import mult_rema
 
 from tests.helpers.utils import create_simulations
 
@@ -96,9 +97,7 @@ def test_sirob(rema, incident, tmp_path):
     assert observed.ndim == 1
     assert observed.shape[0] == 10
     assert np.isclose(observed.axes[0].edges, incident.axes[0].edges).all()
-    assert np.isclose(
-        incident.values() @ rema.values(), observed.values()
-    ).all()
+    assert np.isclose(mult_rema(rema, incident), observed.values()).all()
 
     background = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
@@ -122,7 +121,7 @@ def test_sirob(rema, incident, tmp_path):
     assert observed_bg.shape[0] == 10
     assert np.isclose(observed_bg.axes[0].edges, incident.axes[0].edges).all()
     assert np.isclose(
-        incident.values() @ rema.values() + 2.0 * background.values(),
+        mult_rema(rema, incident) + 2.0 * background.values(),
         observed_bg.values(),
     ).all()
 
@@ -150,7 +149,7 @@ def test_do_step():
 
 def test_boris(rema, incident, tmp_path):
     observed = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
-        data=(incident.values() @ rema.values()).astype(np.int64)
+        data=mult_rema(rema, incident).astype(np.int64)
     )
 
     write_specs(tmp_path / "rema.npz", {"rema": rema})
@@ -173,7 +172,7 @@ def test_boris(rema, incident, tmp_path):
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
     )
     observed_bg = hist.Hist.new.Regular(10, 2000.0, 2200.0).Int64(
-        data=(incident.values() @ rema.values() + background.values())
+        data=(mult_rema(rema, incident) + background.values())
     )
     write_specs(tmp_path / "observed_bg.npz", {"observed_bg": observed_bg})
     write_specs(tmp_path / "background.npz", {"background": background})
