@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris – bayesian deconvolution of nuclear spectra."""
+"""boris – bayesian reconstruction of incident nuclear spectra."""
 
 import logging
 import warnings
@@ -39,7 +39,7 @@ def theuerkauf_norm(sigma, tl):
     Normalization factor for Theuerkauf peak shape
     """
     return 1 / (
-        (sigma**2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma**2))
+        (sigma ** 2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma ** 2))
         + pt.sqrt(np.pi / 2.0)
         * sigma
         * (1 + pt.erf(tl / (pt.sqrt(2.0) * sigma)))
@@ -58,13 +58,13 @@ def theuerkauf(x, pos, vol, sigma, tl):
     norm = theuerkauf_norm(sigma, tl)
     _x = pt.switch(
         dx < -tl,
-        tl / (sigma**2) * (dx + tl / 2.0),
-        -dx * dx / (2.0 * sigma**2),
+        tl / (sigma ** 2) * (dx + tl / 2.0),
+        -dx * dx / (2.0 * sigma ** 2),
     )
     return vol * norm * pt.exp(_x)
 
 
-def deconvolute(
+def fit(
     rema: np.ndarray,
     spectrum: np.ndarray,
     bin_edges: np.ndarray,
@@ -77,7 +77,7 @@ def deconvolute(
     **kwargs,
 ) -> InferenceData:
     r"""
-    Generates a MCMC chain, deconvolutes spectrum using response matrix.
+    Generates a MCMC chain, reconstructs spectrum using response matrix.
 
     :param rema: Response matrix of the detector
     :param spectrum: Observed spectrum
@@ -116,9 +116,7 @@ def deconvolute(
                 "incident", incident_normalization, shape=spectrum.shape[0]
             )
         else:
-            incident = pm.HalfFlat(
-                "incident", shape=spectrum.shape[0]
-            )
+            incident = pm.HalfFlat("incident", shape=spectrum.shape[0])
         if rema_alt is None:
             rema_eff = rema
             rema_eff_diag = np.diag(rema)

@@ -104,7 +104,7 @@ def boris(
     convention: Literal["edges", "centers"] = "edges",
     matrix_alt: Path | None = None,
     force_overwrite: bool = False,
-    deconvolute: Callable[..., Mapping] | None = None,
+    fit: Callable[..., Mapping] | None = None,
     fit_beam=False,
     **kwargs: Any,
 ) -> None:
@@ -147,10 +147,10 @@ def boris(
         that is used to create a linear combination of two
         matrices (interpolate between both matrices).
     :param force_overwrite: Overwrite ``incident_spectrum`` if it exists.
-    :param deconvolute: Alternate function used for deconvolution.
+    :param fit: Alternate function used for fitting.
     :param fit_beam: Perform fit of beam profile
     :param \**kwargs:
-        Keyword arguments are passed to ``deconvolute`` function.
+        Keyword arguments are passed to ``fit`` function.
     """
     if not force_overwrite:
         check_if_exists(incident_spectrum)
@@ -203,9 +203,9 @@ def boris(
             logger.debug(f"Background spectrum:\n{background}")
 
     with do_step("🎲 Sampling from posterior distribution"):
-        if deconvolute is None:
-            from boris.core import deconvolute
-        trace = deconvolute(
+        if fit is None:
+            from boris.core import fit
+        trace = fit(
             rema.values(),
             spectrum.values(),
             rema.axes[0].edges,
@@ -278,8 +278,8 @@ def sirob(
     :param convention:
         `calibration` calibrates `"edges"` (default) or `"centers`.
     :param force_overwrite: Overwrite output_path if it exists.
-    :param deconvolute: Function used for deconvolution.
-    :param kwargs: Passed to ``deconvolute`` function.
+    :param fit: Function used for fitting.
+    :param kwargs: Passed to ``fit`` function.
     """
     if not force_overwrite:
         check_if_exists(observed_spectrum)

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with boris.  If not, see <http://www.gnu.org/licenses/>.
 
-"""boris cli for detector response deconvolution."""
+"""boris cli for detector response reconstruction."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from pathlib import Path
 def boris_app():
     """CLI interface for boris"""
     parser = argparse.ArgumentParser(
-        description="Deconvolute observed_spectrum using the supplied detector response matrix."
+        description="Reconstruct incident_spectrum based on observed_spectrum using the supplied detector response matrix.",
     )
     parser.add_argument(
         "-v",

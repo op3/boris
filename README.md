@@ -8,7 +8,8 @@
 
 ## Bayesian Optimization to Reconstruct the Incident Spectrum
 
-boris is a modern MCMC-based deconvolution code that can be used to unfold nuclear spectra.
+boris is a modern MCMC-based code that can be used
+to reconstruct incident nuclear spectra via forward fitting.
 A (simulated) detector response matrix has to be provided.
 boris is programmed probabalistically using [PyMC](https://docs.pymc.io/).
 A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast convergence and low autocorrelation times.
@@ -19,7 +20,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
     - From individual spectra for different energies (e.g. from [Geant4](https://geant4.web.cern.ch/) simulations)
     - Linear interpolation for missing energies
     - Visualize detector response matrix to check correctness (`checkmatrix`)
-- Deconvolution of observed spectra using detector response matrix (`boris`)
+- Reconstruction of incident spectra from observed spectra using detector response matrix (`boris`)
 - Advanced treatment of uncertainties
 - Subtraction of background spectra with correct treatment of uncertainties
 - Supports reading and writing txt, numpy, hdf5 and root formats
@@ -55,7 +56,7 @@ usage: boris [-h] [-v] [-l LEFT] [-r RIGHT] [-b BINNING_FACTOR] [-H HIST]
              [--force-overwrite]
              matrixfile observed_spectrum incident_spectrum
 
-Deconvolute observed_spectrum using the supplied detector response matrix.
+Reconstruct incident_spectrum based on observed_spectrum using the supplied detector response matrix.
 
 positional arguments:
   matrixfile            container file containing detector response matrix
@@ -201,7 +202,7 @@ The legacy format of [Horst](https://github.com/uga-uga/Horst)
 is also supported.
 In this case, one has to use `boris` with the arguments `--rema-name rema --norm-hist n_simulated_particles`.
 
-The `observed_spectrum` file has to contain the experimentally observed (folded) spectrum.
+The `observed_spectrum` file has to contain the experimentally observed spectrum.
 It can be provided in  `.txt`, `.root`, `.hdf5` or `.txt` format (detected automatically).
 If the file contains multiple objects, the name of the histogram has to be provided using the `-H`/`--hist` option.
 
@@ -313,7 +314,7 @@ options:
 
 ### Beam profile model
 
-During deconvolution, a fit of a beam profile can be applied.
+During the reconstruction, a fit of a beam profile can be applied.
 The following function is used for this purpose,
 which corresponds to a gaussian distribution with a left exponential tail:
 

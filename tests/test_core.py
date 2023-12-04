@@ -21,13 +21,13 @@ import pytest
 
 import numpy as np
 
-from boris.core import deconvolute
+from boris.core import fit
 
 
-def test_deconvolute_mismatch():
+def test_fit_mismatch():
     bin_edges = np.linspace(0, 10, 11)
     rema = np.random.uniform((10, 10))
     spectrum = np.random.poisson(1000, size=10)
     background = np.random.poisson(1000, size=12)
     with pytest.raises(ValueError):
-        deconvolute(rema, spectrum.T, bin_edges, background.T)
+        fit(rema, spectrum.T, bin_edges, background.T)
