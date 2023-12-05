@@ -35,8 +35,9 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 * Python>=3.10
 * [numpy](https://numpy.org/)
-* [PyMC](https://docs.pymc.io/)>=4.0
+* [PyMC](https://docs.pymc.io/)>=5.1
 * [arviz](https://docs.pymc.io/)>=0.14
+* [NumPyro](https://num.pyro.ai/) (*optional, for NumPyro backend, faster execution times!*)
 * [uproot](https://github.com/scikit-hep/uproot4)>=4.1 (*optional, for reading and writing root files*)
 * [h5py](https://www.h5py.org/) (*optional, for reading and writing hdf5 files*)
 * [matplotlib](https://matplotlib.org/) (*optional, for plotting results*)

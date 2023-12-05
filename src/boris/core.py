@@ -25,10 +25,7 @@ import warnings
 import numpy as np
 import pymc as pm
 
-try:
-    from pytensor import tensor as pt
-except ModuleNotFoundError:  # pragma: no cover
-    from aesara import tensor as pt
+from pytensor import tensor as pt
 from arviz import InferenceData, waic
 
 logger = logging.getLogger(__name__)
@@ -210,11 +207,18 @@ def fit(
         start = {"incident": incident_start}
         if background is not None:
             start["background_incident"] = background_start
+
+        import importlib.util
+
+        numpyro_spec = importlib.util.find_spec("numpyro")
+        nuts_sampler = "pymc" if numpyro_spec is None else "numpyro"
+
         trace = pm.sample(
             ndraws,
             step=step,
             start=start,
             idata_kwargs=dict(log_likelihood=True),
+            nuts_sampler=nuts_sampler,
             **kwargs,
         )
 

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections import namedtuple
 from pathlib import Path
 from typing import Mapping, Literal
@@ -35,7 +36,7 @@ from boris.io import read_spectrum, load_rema
 
 logger = logging.getLogger(__name__)
 
-one_sigma = np.math.erf(np.sqrt(0.5))
+one_sigma = math.erf(np.sqrt(0.5))
 
 
 def get_bin_edges_from_calibration(
