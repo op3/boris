@@ -198,6 +198,31 @@ options:
   --force-overwrite     Overwrite existing files without warning
 ```
 
+The provided datfile contains a list of all simulated spectra
+that should be combined into a single detector response matrix.
+For each incident particle energy,
+you have to provide one spectrum in separate files.
+If your spectra are already normalized to the number of simulated particles,
+the datfile should look like this:
+
+```
+sim_1000keV.root: 1000
+sim_2000keV.root: 2000
+sim_3000keV.root: 3000
+sim_4000keV.root: 4000
+```
+
+If your spectra are not normalized (i.e., divided by the number of simulated particles),
+you have to provide the number of simulated particles as well:
+
+```
+sim_1000keV.root: 1000 1000000000
+```
+
+If the files contain spectra for multiple detectors,
+detector response matrices are created for all of them,
+unless you restrict them using the `--detector` argument.
+
 The legacy format of [Horst](https://github.com/uga-uga/Horst)
 (`.root` file with an NBINS×NBINS TH2 histogram called `rema` and a TH1 histogram called `n_simulated_particles` containing the response matrix, and the number of simulated primary particles, respectively)
 is also supported.
