@@ -28,9 +28,7 @@ from pathlib import Path
 
 def checkmatrix_app():
     """CLI interface for boris2spec."""
-    parser = argparse.ArgumentParser(
-        description="Display detector response matrix."
-    )
+    parser = argparse.ArgumentParser(description="Display detector response matrix.")
     parser.add_argument(
         "-v",
         "--verbose",

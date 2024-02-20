@@ -129,9 +129,7 @@ def test_rebin_uniform_same():
 
 
 def test_read_rebin_spectrum(tmp_path):
-    h = hist.Hist.new.Regular(10, 0, 10).Int64(
-        data=np.random.uniform(0, 100, size=10)
-    )
+    h = hist.Hist.new.Regular(10, 0, 10).Int64(data=np.random.uniform(0, 100, size=10))
     path = tmp_path / "test.npz"
     write_specs(path, {"test": h})
 
@@ -167,20 +165,14 @@ def test_read_rebin_spectrum(tmp_path):
         data=np.random.uniform(10, 100, size=10).astype(np.int64)
     )
     write_specs(tmp_path / "test2.npz", {"somename": h2})
-    test = read_rebin_spectrum(
-        tmp_path / "test2.npz", np.linspace(2000.0, 2200.0, 11)
-    )
+    test = read_rebin_spectrum(tmp_path / "test2.npz", np.linspace(2000.0, 2200.0, 11))
     assert np.isclose(test.axes[0].edges, np.linspace(2000.0, 2200.0, 11)).all()
     print(h2.sum())
     print(test.sum())
     assert test.sum() == h2.sum()
 
-    test = read_rebin_spectrum(
-        tmp_path / "test2.npz", np.linspace(2000.0, 2200.0, 101)
-    )
-    assert np.isclose(
-        test.axes[0].edges, np.linspace(2000.0, 2200.0, 101)
-    ).all()
+    test = read_rebin_spectrum(tmp_path / "test2.npz", np.linspace(2000.0, 2200.0, 101))
+    assert np.isclose(test.axes[0].edges, np.linspace(2000.0, 2200.0, 101)).all()
     assert test.sum() == h2.sum()
     print(test.sum())
 
@@ -208,9 +200,7 @@ def test_read_rebin_spectrum_negative(tmp_path):
 
 
 def test_read_rebin_spectrum_non_int(tmp_path):
-    h = hist.Hist.new.Regular(10, 0, 10).Double(
-        data=np.random.uniform(0, 100, size=10)
-    )
+    h = hist.Hist.new.Regular(10, 0, 10).Double(data=np.random.uniform(0, 100, size=10))
     path = tmp_path / "test.npz"
     write_specs(path, {"test": h})
 
@@ -292,9 +282,7 @@ def test_create_matrix(tmp_path):
 
 
 def test_create_matrix_tv(tmp_path):
-    simulations = create_simulations(
-        tmp_path, detectors=["det2"], shift_axis=-0.5
-    )
+    simulations = create_simulations(tmp_path, detectors=["det2"], shift_axis=-0.5)
     sim_spectra = get_simulation_spectra(simulations, "det2")
     mat = create_matrix(sim_spectra, 601, -0.5, 600.5)
     assert (mat.axes[0].edges == mat.axes[1].edges).all()

@@ -31,7 +31,7 @@ repos:
     args: ["--min-py3-version", "3.10"]
 
 - repo: https://github.com/PyCQA/flake8
-  rev: 4.0.1
+  rev: 7.0.0
   hooks:
   - id: flake8
     additional_dependencies:

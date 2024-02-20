@@ -103,15 +103,11 @@ def get_calibration_from_file(calfile: Path, spectrum: str) -> np.ndarray:
         for line in f:
             if res := pat.match(line.strip()):
                 if res.groups()[0] == spectrum:
-                    return np.array(
-                        [float(c) for c in line.split(":")[-1].split()]
-                    )
+                    return np.array([float(c) for c in line.split(":")[-1].split()])
     raise KeyError(f"No calibration for {spectrum} found in {calfile}")
 
 
-def obj_resolve_name(
-    mapping: Mapping[str, Any], name: str | None = None
-) -> str:
+def obj_resolve_name(mapping: Mapping[str, Any], name: str | None = None) -> str:
     """
     Returns object from mapping.
 
@@ -162,18 +158,14 @@ def get_keys_in_container(path: Path) -> list[str]:
 
         with h5py.File(path, "r") as container:
             return list(container.keys())
-    elif match := re.match(
-        "^text/(comma|tab|space)-separated-values$", filetype
-    ):
+    elif match := re.match("^text/(comma|tab|space)-separated-values$", filetype):
         delimiter = {
             "comma": ",",
             "tab": "\t",
             "space": " ",
         }.get(match.groups()[0])
         return list(
-            np.genfromtxt(
-                path, delimiter=delimiter, names=True, max_rows=1
-            ).dtype.names
+            np.genfromtxt(path, delimiter=delimiter, names=True, max_rows=1).dtype.names
         )
     return []
 
@@ -223,9 +215,7 @@ def read_spectrum_hdf5(
         obj = specfile[key]
         for _ in range(obj[()].ndim):
             try:
-                h = h.Regular(
-                    obj.attrs["nbins"], obj.attrs["start"], obj.attrs["stop"]
-                )
+                h = h.Regular(obj.attrs["nbins"], obj.attrs["start"], obj.attrs["stop"])
             except KeyError:
                 try:
                     h = h.Variable(obj.attrs["edges"])
@@ -256,9 +246,7 @@ def read_spectrum_npz(
         obj = specfile[key]
         for _ in range(obj.ndim):
             if all(f"{key}_{suf}" in specfile for suf in regular_info):
-                h = h.Regular(
-                    *[specfile[f"{key}_{suf}"] for suf in regular_info]
-                )
+                h = h.Regular(*[specfile[f"{key}_{suf}"] for suf in regular_info])
             elif all(s in specfile for s in ["nbins", "start", "stop"]):
                 h = h.Regular(*[specfile[suf] for suf in regular_info])
             elif "edges" in specfile:
@@ -294,9 +282,7 @@ def read_spectrum_txt(
         if arr.shape[0] < arr.shape[1]:
             arr = arr.T
 
-        cols_asc = [
-            i for i in range(arr.shape[1]) if (np.diff(arr[:, i]) > 0).all()
-        ]
+        cols_asc = [i for i in range(arr.shape[1]) if (np.diff(arr[:, i]) > 0).all()]
 
         if not cols_asc:
             # No binning information, assume first column is spectrum
@@ -391,9 +377,7 @@ def read_spectrum(
             return read_spectrum_npz(spectrum, histname)
         elif filetype == "application/x-hdf5":
             return read_spectrum_hdf5(spectrum, histname)
-        elif match := re.match(
-            "^text/(comma|tab|space)-separated-values$", filetype
-        ):
+        elif match := re.match("^text/(comma|tab|space)-separated-values$", filetype):
             if not histname:
                 # TODO: Try to use sole hist, if it exists
                 raise KeyError("No histname given for container")
@@ -558,9 +542,7 @@ class SimInfo:
         return f"{self.path}: {self.energy} {self.nevents}"
 
 
-def read_dat_file(
-    dat_file_path: Path, sim_root: Path | None = None
-) -> list[SimInfo]:
+def read_dat_file(dat_file_path: Path, sim_root: Path | None = None) -> list[SimInfo]:
     """Reads and parses datfile.
 
     :param dat_file_path: Path to datfile.

@@ -72,7 +72,7 @@ def do_step(text: str, simple: bool = False) -> Generator[None, None, None]:
             logger.info(text)
         else:
             logger.info(f"{text} complete")
-    except BaseException as e:
+    except Exception as e:
         logger.error(f"{text} failed:")
         logger.error(e, exc_info=True)
         exit(1)
@@ -167,17 +167,13 @@ def boris(
         with do_step(
             f"Reading alternative response matrix {rema_name} from {matrix_alt}"
         ):
-            rema_alt = get_rema(
-                matrix_alt, rema_name, binning_factor, left, right
-            )
+            rema_alt = get_rema(matrix_alt, rema_name, binning_factor, left, right)
             logger.debug(
                 f"Alternative response matrix diagonal:\n{rema_alt.values().diagonal()}"
             )
 
     print_histname = f" ({histname})" if histname else ""
-    with do_step(
-        f"Reading observed spectrum {observed_spectrum}{print_histname}"
-    ):
+    with do_step(f"Reading observed spectrum {observed_spectrum}{print_histname}"):
         spectrum = read_rebin_spectrum(
             observed_spectrum,
             edges,
@@ -292,9 +288,7 @@ def sirob(
         # logger.debug(f"Response matrix diagonal:\n{rema.values().diagonal()}")
 
     print_histname = f" ({histname})" if histname else ""
-    with do_step(
-        f"Reading incident spectrum {incident_spectrum}{print_histname}"
-    ):
+    with do_step(f"Reading incident spectrum {incident_spectrum}{print_histname}"):
         incident = read_rebin_spectrum(
             incident_spectrum,
             rema.axes[0].edges,
@@ -410,9 +404,7 @@ def boris2spec(
                 if data.ndim == 1:
                     res[var] = data
                 elif data.ndim == 2:
-                    res.update(
-                        qty_extractor.extract(data.values[..., burn::thin], var)
-                    )
+                    res.update(qty_extractor.extract(data.values[..., burn::thin], var))
                 else:
                     logger.error(
                         f"Unknown dimension {data.ndim} with shape {data.shape} for '{var}'."
@@ -525,9 +517,7 @@ def make_matrix(
             pbar.set_description(f"Creating matrix for detector {det}")
             sim_spectra = get_simulation_spectra(simulations, det)
             max_energy = max_energy or max(sim_spectra.keys())
-            remas[det] = create_matrix(
-                sim_spectra, int(max_energy), 0, max_energy
-            )
+            remas[det] = create_matrix(sim_spectra, int(max_energy), 0, max_energy)
 
     with do_step(f"Writing created matrices to {output_path}"):
         write_specs(output_path, remas, force_overwrite)

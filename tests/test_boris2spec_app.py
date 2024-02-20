@@ -62,9 +62,7 @@ def test_boris2spec_app(tmp_path):
     assert bin_edges.shape[0] == 11
 
     for key in ["mean", "median", "var", "std", "hdi_lo", "hdi_hi"]:
-        res, (bin_edges,) = read_spectrum(
-            tmp_path / "output.npz", f"incident_{key}"
-        )
+        res, (bin_edges,) = read_spectrum(tmp_path / "output.npz", f"incident_{key}")
         assert res.ndim == 1
         assert res.shape[0] == 10
 

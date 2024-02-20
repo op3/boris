@@ -1,5 +1,5 @@
 [tool.black]
-line-length = 80
+line-length = 88
 target-version = ['py38', 'py39']
 include = '\.pyi?$'
 exclude = '''
@@ -18,3 +18,10 @@ exclude = '''
 pythonpath = [
   "src"
 ]
+
+[tool.ruff]
+select=["C","E","F","W","I"]
+ignore=["E501","E741","C408","C901"]
+
+[tool.ruff.isort]
+lines-after-imports = 2

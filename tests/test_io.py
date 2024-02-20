@@ -63,9 +63,7 @@ def test_centers_to_edges():
     ],
 )
 def test_write_specs_regular_double(tmp_path, filename):
-    h = hist.Hist.new.Regular(100, 0, 100).Double(
-        data=np.random.uniform(size=100)
-    )
+    h = hist.Hist.new.Regular(100, 0, 100).Double(data=np.random.uniform(size=100))
     write_specs(tmp_path / filename, {"testhist": h})
     assert (tmp_path / filename).exists()
     res_hist = read_spectrum(tmp_path / filename, "testhist")
@@ -92,9 +90,7 @@ def test_write_specs_regular_double(tmp_path, filename):
     ],
 )
 def test_write_specs_regular_int(tmp_path, filename):
-    h = hist.Hist.new.Regular(100, 0, 100).Int64(
-        data=np.random.uniform(size=100)
-    )
+    h = hist.Hist.new.Regular(100, 0, 100).Int64(data=np.random.uniform(size=100))
     write_specs(tmp_path / filename, {"testhist": h})
     assert (tmp_path / filename).exists()
     res_hist = read_spectrum(tmp_path / filename, "testhist")
@@ -139,25 +135,19 @@ def test_write_specs_variable(tmp_path, filename):
 
 
 def test_write_specs_exists(tmp_path):
-    h = hist.Hist.new.Regular(100, 0, 100).Double(
-        data=np.random.uniform(size=100)
-    )
+    h = hist.Hist.new.Regular(100, 0, 100).Double(data=np.random.uniform(size=100))
     with pytest.raises(Exception):
         write_specs(tmp_path, {"test": h})
 
 
 def test_write_specs_mkdir(tmp_path):
-    h = hist.Hist.new.Regular(100, 0, 100).Double(
-        data=np.random.uniform(size=100)
-    )
+    h = hist.Hist.new.Regular(100, 0, 100).Double(data=np.random.uniform(size=100))
     write_specs(tmp_path / "dir" / "test.npz", {"test": h})
     assert (tmp_path / "dir" / "test.npz").exists()
 
 
 def test_write_specs_unknown_format(tmp_path):
-    h = hist.Hist.new.Regular(100, 0, 100).Double(
-        data=np.random.uniform(size=100)
-    )
+    h = hist.Hist.new.Regular(100, 0, 100).Double(data=np.random.uniform(size=100))
     with pytest.raises(Exception):
         write_specs(tmp_path / "unknown.invalid", {"test": h})
 

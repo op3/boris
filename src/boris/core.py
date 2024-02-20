@@ -37,9 +37,7 @@ def theuerkauf_norm(sigma, tl):
     """
     return 1 / (
         (sigma**2) / tl * pt.exp(-(tl * tl) / (2.0 * sigma**2))
-        + pt.sqrt(np.pi / 2.0)
-        * sigma
-        * (1 + pt.erf(tl / (pt.sqrt(2.0) * sigma)))
+        + pt.sqrt(np.pi / 2.0) * sigma * (1 + pt.erf(tl / (pt.sqrt(2.0) * sigma)))
     )
 
 
@@ -148,9 +146,7 @@ def fit(
         pm.Deterministic("incident_scaled_to_fep", incident * rema_eff_diag)
 
         if fit_beam:
-            beam_pos = pm.Uniform(
-                "beam_pos", bin_edges[0], bin_edges[-1], shape=1
-            )
+            beam_pos = pm.Uniform("beam_pos", bin_edges[0], bin_edges[-1], shape=1)
             beam_width = pm.Uniform(
                 "beam_width",
                 np.diff(bin_edges).min(),

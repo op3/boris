@@ -97,9 +97,7 @@ def read_rebin_spectrum(
         if not isinstance(spectrum.axes[0], hist.axis.Integer):
             logger.warning("Ignoring binning information of spectrum")
         spectrum = hist.Hist.new.Variable(
-            get_bin_edges_from_calibration(
-                spectrum.shape[0], calibration, convention
-            )
+            get_bin_edges_from_calibration(spectrum.shape[0], calibration, convention)
         ).Int64(data=spectrum.values())
 
     spec_rebin = rebin_uniform(
@@ -246,9 +244,7 @@ def get_rema(
     ]
 
 
-def interpolate_grid(
-    grid: np.ndarray, point: float
-) -> list[tuple[int, float, float]]:
+def interpolate_grid(grid: np.ndarray, point: float) -> list[tuple[int, float, float]]:
     """
     Create a linear interpolation to ̀ `point`` given a 1D-grid
 
@@ -489,9 +485,7 @@ def get_quantities(
     return res
 
 
-def mult_rema(
-    rema: hist.hist.Hist, incident_spec: hist.hist.Hist
-) -> np.ndarray:
+def mult_rema(rema: hist.hist.Hist, incident_spec: hist.hist.Hist) -> np.ndarray:
     """
     Apply a response matrix to an incident spectrum
 
@@ -501,9 +495,7 @@ def mult_rema(
     return rema.values()[::-1, ::-1] @ incident_spec.values()
 
 
-def mult_rema_inv(
-    rema: hist.hist.Hist, observed_spec: hist.hist.Hist
-) -> np.ndarray:
+def mult_rema_inv(rema: hist.hist.Hist, observed_spec: hist.hist.Hist) -> np.ndarray:
     """
     Apply the inverse of a response matrix to an observed spectrum
 
