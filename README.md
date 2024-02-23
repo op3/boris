@@ -42,6 +42,14 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 * [h5py](https://www.h5py.org/) (*optional, for reading and writing hdf5 files*)
 * [matplotlib](https://matplotlib.org/) (*optional, for plotting results*)
 
+## Installation
+
+You can install boris using pip:
+
+```
+pip install git+https://github.com/op3/boris.git
+```
+
 ## Usage
 
 The `boris` command is provided to construct the MCMC chain:
