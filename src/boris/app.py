@@ -554,6 +554,9 @@ def check_matrix(
         # logger.debug(f"Response matrix diagonal:\n{rema.values().diagonal()}")
 
     # Hide zero-values
+    if (rema.values() == 0.0).all():
+        logger.error(f"The histogram {rema_name} is empty, nothing to display!")
+        exit()
     rema.values()[rema.values() == 0.0] = np.nan
     vmin = np.nanquantile(rema.values()[rema.values() > 1e-20], 0.01)
     vmax = np.nanmax(rema.values())
