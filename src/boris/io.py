@@ -558,7 +558,8 @@ def read_dat_file(dat_file_path: Path, sim_root: Path | None = None) -> list[Sim
     sim_root = sim_root or dat_file_path.parents[0]
     with open(dat_file_path) as f:
         for line in f:
-            simulations.append(SimInfo.from_dat_file_line(line, sim_root))
+            if line.strip():
+                simulations.append(SimInfo.from_dat_file_line(line, sim_root))
     return simulations
 
 

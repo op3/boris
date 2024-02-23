@@ -25,7 +25,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import numpy as np
+import math
 
 
 def boris2spec_app():
@@ -115,7 +115,7 @@ def boris2spec_app():
         "--hdi-prob",
         metavar="PROB",
         help="HDI prob for which interval will be computed",
-        default=np.math.erf(np.sqrt(0.5)),
+        default=math.erf(math.sqrt(0.5)),
     )
     parser.add_argument(
         "--burn",
