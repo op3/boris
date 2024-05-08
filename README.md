@@ -1,5 +1,6 @@
 # boris
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11147261.svg)](https://doi.org/10.5281/zenodo.11147261)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/op3/boris/run-tests.yml?branch=master&label=tests)](https://github.com/op3/boris/actions/workflows/run-tests.yml)
 [![Code Style](https://img.shields.io/github/actions/workflow/status/op3/boris/check-code-formatting.yml?branch=master&label=style)](https://github.com/op3/boris/actions/workflows/check-code-formatting.yml)
 [![codecov](https://codecov.io/gh/op3/boris/branch/master/graph/badge.svg)](https://codecov.io/gh/op3/boris)

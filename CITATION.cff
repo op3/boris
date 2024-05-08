@@ -8,6 +8,10 @@ authors:
     email: "opapst@ikp.tu-darmstadt.de"
     affiliation: "Technische Universität Darmstadt, Department of Physics, Institut für Kernphysik"
     orcid: "https://orcid.org/0000-0002-1037-4183"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.11147261
+    description: The concept DOI of the work
 repository-code: "https://github.com/op3/boris"
 abstract: "boris is a modern MCMC-based code that can be used to reconstruct incident nuclear spectra via forward fitting"
 license: GPL-3.0-or-later
