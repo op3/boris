@@ -6,7 +6,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/19e37af38cc8449289b5e8abfb85f45b)](https://www.codacy.com/manual/op3/boris)
 [![License: GPL-3.0](https://img.shields.io/github/license/op3/boris?color=blue)](COPYING)
 
-## Bayesian Optimization to Reconstruct the Incident Spectrum
+## Bayesian Operations to Reconstruct the Incident Spectrum
 
 boris is a modern MCMC-based code that can be used
 to reconstruct incident nuclear spectra via forward fitting.
@@ -36,7 +36,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 * Python>=3.10
 * [numpy](https://numpy.org/)
 * [PyMC](https://docs.pymc.io/)>=5.1
-* [arviz](https://docs.pymc.io/)>=0.14
+* [arviz](https://python.arviz.org/)>=0.14
 * [NumPyro](https://num.pyro.ai/) (*optional, for NumPyro backend, faster execution times!*)
 * [uproot](https://github.com/scikit-hep/uproot4)>=4.1 (*optional, for reading and writing root files*)
 * [h5py](https://www.h5py.org/) (*optional, for reading and writing hdf5 files*)
@@ -44,7 +44,7 @@ A [No-U-Turn Sampler](https://arxiv.org/abs/1111.4246) is used to ensure fast co
 
 ## Installation
 
-You can install boris using pip:
+You can install boris using pip or pipx, e.g.:
 
 ```
 pip install git+https://github.com/op3/boris.git
@@ -373,7 +373,7 @@ def beam_profile_model(x, pos, vol, sigma, tl):
 
 ## License
 
-Copyright © 2020–2023
+Copyright ©
 
 Oliver Papst `<opapst@ikp.tu-darmstadt.de>`
 
@@ -383,5 +383,6 @@ This code is distributed under the terms of the GNU General Public License, vers
 
 We thank U. Friman-Gayer for valuable discussions
 and J. Kleemann for testing.
-This work has been funded by the State of Hesse under the grant “Nuclear Photonics” within the LOEWE program.
+This work has been funded by the State of Hesse under the grant “Nuclear Photonics” within the LOEWE program (LOEWE/2/11/519/03/04.001(0008)/62),
+and by the Bundesministerium für Bildung und Forschung (BMBF, Federal Ministry of Education and Research) under grant 05P21RDEN9.
 O. Papst acknowledges support by the Helmholtz Graduate School for Hadron and Ion Research of the Helmholtz Association.

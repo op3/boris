@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: "boris"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - given-names: "Oliver"
+    family-names: "Papst"
+    email: "opapst@ikp.tu-darmstadt.de"
+    affiliation: "Technische Universität Darmstadt, Department of Physics, Institut für Kernphysik"
+    orcid: "https://orcid.org/0000-0002-1037-4183"
+repository-code: "https://github.com/op3/boris"
+abstract: "boris is a modern MCMC-based code that can be used to reconstruct incident nuclear spectra via forward fitting"
+license: GPL-3.0-or-later
