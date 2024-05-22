@@ -495,6 +495,12 @@ def load_rema(
     :return: Response matrix
     """
     rema = read_spectrum(path, key_rema)
+    if any([isinstance(ax, hist.axis.Integer) for ax in rema.axes]):
+        axes = []
+        for ax in rema.axes:
+            axes.append(hist.axis.Regular(ax.size, ax.edges[0], ax.edges[-1]))
+        rema = hist.Hist(*axes, storage=rema.storage_type, data=rema.values())
+        # h = hist.Hist(*axes)
     rema.axes[0].label = "Incoming energy"
     rema.axes[1].label = "Observed energy"
     if rema.ndim != 2 or not (rema.axes[0].edges == rema.axes[1].edges).all():
