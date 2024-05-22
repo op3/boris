@@ -241,7 +241,7 @@ def get_rema(
     return rema[
         hist.loc(left) : hist.loc(right) + 1 : hist.rebin(binning_factor),
         hist.loc(left) : hist.loc(right) + 1 : hist.rebin(binning_factor),
-    ]
+    ].T
 
 
 def interpolate_grid(grid: np.ndarray, point: float) -> list[tuple[int, float, float]]:
